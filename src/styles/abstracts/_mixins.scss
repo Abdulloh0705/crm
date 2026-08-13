@@ -1,0 +1,99 @@
+@use 'variables' as v;
+
+@mixin respond-up($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin respond-down($breakpoint) {
+  @media (max-width: ($breakpoint - 1px)) {
+    @content;
+  }
+}
+
+@mixin flex($align: center, $justify: flex-start, $gap: 0) {
+  display: flex;
+  align-items: $align;
+  justify-content: $justify;
+  @if $gap != 0 {
+    gap: $gap;
+  }
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid v.$color-primary-500;
+    outline-offset: 2px;
+  }
+}
+
+// Tier 2 of the surface system: solid, soft-shadow card — same border-
+// radius/shadow language as glass-panel but with no backdrop-filter, so it's
+// cheap to repeat many times (tables, list rows, kanban cards, form cards).
+@mixin card-surface {
+  background: v.$color-bg-surface;
+  border: 1px solid v.$color-border;
+  border-radius: v.$radius-lg;
+  box-shadow: v.$shadow-sm;
+}
+
+// Tier 1 of the surface system: true translucent blur glass. Reserved for a
+// handful of large "chrome" surfaces on screen at once (sidebar, header,
+// modal, login card, dashboard KPI cards) — see abstracts/_glass.scss.
+@mixin glass-panel($blur: v.$glass-blur-md, $bg: v.$glass-bg, $border: v.$glass-border, $radius: v.$radius-lg) {
+  position: relative;
+  background: $bg;
+  backdrop-filter: blur($blur) saturate(160%);
+  -webkit-backdrop-filter: blur($blur) saturate(160%);
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: inset 0 1px 0 v.$glass-highlight, v.$shadow-lg;
+  overflow: hidden;
+
+  // Faint diagonal sheen — the "soft reflection" that reads as glass rather
+  // than a flat tinted rectangle.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 42%);
+    pointer-events: none;
+  }
+}
+
+@mixin glass-hover {
+  transition: transform v.$transition-base, box-shadow v.$transition-base;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px 0 v.$glass-highlight, v.$shadow-lg, 0 0 0 1px rgba(109, 94, 248, 0.1);
+  }
+}
+
+@mixin surface-hover {
+  transition: transform v.$transition-fast, box-shadow v.$transition-fast, border-color v.$transition-fast;
+  &:hover {
+    box-shadow: v.$shadow-md;
+    border-color: v.$color-gray-300;
+  }
+}
+
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: v.$color-gray-300;
+    border-radius: v.$radius-full;
+  }
+}

@@ -1,0 +1,56 @@
+@use '../../styles/abstracts/variables' as v;
+@use '../../styles/abstracts/mixins' as m;
+
+.badge {
+  @include m.flex(center, center, v.$space-1);
+  display: inline-flex;
+  height: 24px;
+  padding: 0 v.$space-3;
+  border-radius: v.$radius-full;
+  font-size: v.$font-size-xs;
+  font-weight: v.$font-weight-semibold;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: v.$radius-full;
+    background: currentColor;
+  }
+
+  &--gray {
+    background: v.$color-gray-100;
+    color: v.$color-gray-600;
+  }
+
+  &--success {
+    background: v.$color-success-50;
+    color: v.$color-success-700;
+  }
+
+  &--warning {
+    background: v.$color-warning-50;
+    color: v.$color-warning-700;
+  }
+
+  &--danger {
+    background: v.$color-danger-50;
+    color: v.$color-danger-700;
+  }
+
+  &--info {
+    background: v.$color-info-50;
+    color: v.$color-info-700;
+  }
+
+  &--primary {
+    background: v.$color-primary-50;
+    color: v.$color-primary-700;
+  }
+
+  &--no-dot::before {
+    display: none;
+  }
+}

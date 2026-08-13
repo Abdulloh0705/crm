@@ -1,0 +1,46 @@
+import { Outlet, useLocation } from 'react-router-dom'
+import { Sidebar } from './Sidebar'
+import { Header } from './Header'
+import './AdminLayout.scss'
+
+const TITLE_MAP = [
+  { prefix: '/admin/employees', title: 'Xodimlar' },
+  { prefix: '/admin/teams', title: 'Jamoalar' },
+  { prefix: '/admin/settings', title: 'Sozlamalar' },
+  { prefix: '/admin/profile', title: 'Profil' },
+  { prefix: '/admin/my-work', title: 'Mening ishlarim' },
+  { prefix: '/admin/crm/dashboard', title: 'CRM statistikasi' },
+  { prefix: '/admin/crm/customers', title: 'Mijozlar' },
+  { prefix: '/admin/crm/businesses', title: 'Bizneslar' },
+  { prefix: '/admin/crm/leads', title: 'Murojaatlar' },
+  { prefix: '/admin/crm/deals', title: 'Savdolar' },
+  { prefix: '/admin/crm/quotations', title: 'Takliflar' },
+  { prefix: '/admin/crm/payments', title: 'To‘lovlar' },
+  { prefix: '/admin/crm/tasks', title: 'Vazifalar' },
+  { prefix: '/admin/crm/activities', title: 'Faoliyatlar' },
+  { prefix: '/admin/crm/installations', title: 'O‘rnatishlar' },
+  { prefix: '/admin', title: 'Boshqaruv paneli' },
+]
+
+function resolveTitle(pathname) {
+  return TITLE_MAP.find((entry) => pathname.startsWith(entry.prefix))?.title || 'BOLD YECHIM'
+}
+
+export function AdminLayout() {
+  const location = useLocation()
+
+  return (
+    <div className="admin-layout">
+      <div className="ambient-background">
+        <div className="ambient-background__accent" />
+      </div>
+      <Sidebar />
+      <div className="admin-layout__main">
+        <Header title={resolveTitle(location.pathname)} />
+        <main className="admin-layout__content page-enter" key={location.pathname}>
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  )
+}

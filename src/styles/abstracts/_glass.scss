@@ -1,0 +1,63 @@
+// Ambient background + standalone glass/surface utility classes. The
+// mixins that generate these live in _mixins.scss — this file is where they
+// actually get emitted as usable classes, plus the one ambient-background
+// layer used once per layout root (AdminLayout, AuthLayout).
+@use 'variables' as v;
+@use 'mixins' as m;
+
+// Fixed, static (not animated) soft ambient light behind every screen.
+// Static blur on a stationary layer is cheap (composited once by the GPU) —
+// deliberately not animated, per the "no heavy/constant animation" rule.
+.ambient-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: v.$color-bg-body;
+  pointer-events: none;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+  }
+
+  &::before {
+    top: -12%;
+    left: -8%;
+    width: 46vw;
+    height: 46vw;
+    background: radial-gradient(circle, rgba(109, 94, 248, 0.16) 0%, rgba(109, 94, 248, 0) 70%);
+  }
+
+  &::after {
+    bottom: -18%;
+    right: -10%;
+    width: 52vw;
+    height: 52vw;
+    background: radial-gradient(circle, rgba(201, 162, 87, 0.12) 0%, rgba(201, 162, 87, 0) 70%);
+  }
+}
+
+.ambient-background__accent {
+  position: absolute;
+  top: 30%;
+  right: 18%;
+  width: 34vw;
+  height: 34vw;
+  border-radius: 50%;
+  filter: blur(90px);
+  background: radial-gradient(circle, rgba(74, 128, 217, 0.1) 0%, rgba(74, 128, 217, 0) 70%);
+  pointer-events: none;
+}
+
+// Standalone utility classes (for ad hoc use outside a dedicated component).
+.glass-panel {
+  @include m.glass-panel;
+}
+
+.surface-card {
+  @include m.card-surface;
+}

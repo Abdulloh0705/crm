@@ -1,0 +1,31 @@
+@use '../../styles/abstracts/variables' as v;
+@use '../../styles/abstracts/mixins' as m;
+
+// Cards repeat many times per page (every detail page has several), so they
+// use the solid `surface-card` tier — same rounded/border/shadow language as
+// the glass chrome, but no backdrop-filter.
+.card {
+  @include m.card-surface;
+  padding: v.$space-6;
+
+  &--no-padding {
+    padding: 0;
+  }
+
+  &__header {
+    @include m.flex(center, space-between);
+    margin-bottom: v.$space-4;
+  }
+
+  &__title {
+    font-size: v.$font-size-md;
+    font-weight: v.$font-weight-semibold;
+  }
+
+  &__footer {
+    margin-top: v.$space-5;
+    padding-top: v.$space-4;
+    border-top: 1px solid v.$color-border;
+    @include m.flex(center, flex-end, v.$space-3);
+  }
+}

@@ -1,0 +1,63 @@
+@use '../../styles/abstracts/variables' as v;
+@use '../../styles/abstracts/mixins' as m;
+
+.kanban {
+  display: flex;
+  gap: v.$space-4;
+  overflow-x: auto;
+  padding-bottom: v.$space-2;
+  @include m.custom-scrollbar;
+}
+
+.kanban__column {
+  flex: 0 0 272px;
+  // Columns are few (~7) and large, so true glass is affordable here —
+  // lighter blur than modals/sidebar since there can be several on screen.
+  @include m.glass-panel($blur: v.$glass-blur-sm, $bg: rgba(255, 255, 255, 0.4), $radius: v.$radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+  transition: border-color v.$transition-fast, background-color v.$transition-fast;
+
+  &--drag-over {
+    border-color: v.$color-primary-400;
+    background: rgba(109, 94, 248, 0.08);
+  }
+}
+
+.kanban__column-header {
+  @include m.flex(center, space-between);
+  position: relative;
+  z-index: 1;
+  padding: v.$space-3 v.$space-4;
+  font-size: v.$font-size-sm;
+  font-weight: v.$font-weight-semibold;
+  border-bottom: 1px solid v.$color-border;
+}
+
+.kanban__count {
+  font-size: v.$font-size-xs;
+  color: v.$color-text-muted;
+  background: v.$color-white;
+  border-radius: v.$radius-full;
+  padding: 1px v.$space-2;
+}
+
+.kanban__cards {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  overflow-y: auto;
+  padding: v.$space-3;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+  @include m.custom-scrollbar;
+}
+
+.kanban__card {
+  cursor: grab;
+  &:active {
+    cursor: grabbing;
+  }
+}
