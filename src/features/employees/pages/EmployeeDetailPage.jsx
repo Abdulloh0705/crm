@@ -25,6 +25,7 @@ import { useToast } from '../../../store/ToastContext'
 import { validate, rules } from '../../../utils/validators'
 import { formatDate } from '../../../utils/formatDate'
 import { ROLE_LABELS, ROLE_DEFAULT_PERMISSIONS } from '../../roles/permissions'
+import { INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { InboxIcon, BuildingIcon, DashboardIcon, TeamIcon, UsersIcon } from '../../../components/icons/Icons'
 import './EmployeeDetailPage.scss'
 
@@ -306,7 +307,7 @@ export function EmployeeDetailPage() {
           fetcher={() => employeesService.getAssignedInstallations(id)}
           deps={[id]}
           linkTo={(item) => `/admin/crm/installations/${item.id}`}
-          renderItem={(item) => <span>{item.status}</span>}
+          renderItem={(item) => <span>{INSTALLATION_STATUS_LABELS[item.status] || item.status}</span>}
           emptyHint="Bu xodimga hali o‘rnatish biriktirilmagan."
         />
         <RelatedList

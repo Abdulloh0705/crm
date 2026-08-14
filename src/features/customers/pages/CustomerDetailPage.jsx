@@ -4,6 +4,8 @@ import { useCustomer } from '../customers.hooks'
 import { customersService } from '../../../services/customers.service'
 import { CustomerForm } from '../components/CustomerForm'
 import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { PAYMENT_STATUS_LABELS } from '../../payments/payments.constants'
+import { INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { Card } from '../../../components/Card/Card'
 import { Badge } from '../../../components/Badge/Badge'
 import { Button } from '../../../components/Button/Button'
@@ -178,7 +180,7 @@ export function CustomerDetailPage() {
               title="To‘lovlar"
               fetcher={() => customersService.getPayments(id)}
               deps={[id]}
-              renderItem={(item) => <span>{item.amount} — {item.status}</span>}
+              renderItem={(item) => <span>{item.amount} — {PAYMENT_STATUS_LABELS[item.status] || item.status}</span>}
               emptyHint="Bu mijoz uchun hali to‘lov qayd etilmagan."
             />
           )}
@@ -206,7 +208,7 @@ export function CustomerDetailPage() {
               fetcher={() => customersService.getInstallations(id)}
               deps={[id]}
               linkTo={(item) => `/admin/crm/installations/${item.id}`}
-              renderItem={(item) => <span>{item.status}</span>}
+              renderItem={(item) => <span>{INSTALLATION_STATUS_LABELS[item.status] || item.status}</span>}
               emptyHint="Bu mijoz uchun hali o‘rnatish rejalashtirilmagan."
             />
           )}

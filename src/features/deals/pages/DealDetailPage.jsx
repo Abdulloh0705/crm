@@ -31,6 +31,8 @@ import { useConfirm } from '../../../store/ConfirmContext'
 import { useToast } from '../../../store/ToastContext'
 import { useDisclosure } from '../../../hooks/useDisclosure'
 import { formatDate } from '../../../utils/formatDate'
+import { QUOTATION_STATUS_LABELS } from '../../quotations/quotations.constants'
+import { INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 
 const TABS = [
   { id: 'overview', label: 'Umumiy' },
@@ -302,7 +304,7 @@ export function DealDetailPage() {
               fetcher={() => dealsService.getQuotations(id)}
               deps={[id, refreshKey]}
               linkTo={(item) => `/admin/crm/quotations/${item.id}`}
-              renderItem={(item) => <span>#{item.number} — {item.status}</span>}
+              renderItem={(item) => <span>#{item.number} — {QUOTATION_STATUS_LABELS[item.status] || item.status}</span>}
               emptyHint="Bu savdo uchun hali taklif yaratilmagan."
               action={
                 <PermissionGate permission="quotations.create">
@@ -334,7 +336,7 @@ export function DealDetailPage() {
               fetcher={() => dealsService.getInstallations(id)}
               deps={[id, refreshKey]}
               linkTo={(item) => `/admin/crm/installations/${item.id}`}
-              renderItem={(item) => <span>{item.status}</span>}
+              renderItem={(item) => <span>{INSTALLATION_STATUS_LABELS[item.status] || item.status}</span>}
               emptyHint="Bu savdo uchun hali o‘rnatish rejalashtirilmagan."
               action={
                 <PermissionGate permission="installations.create">

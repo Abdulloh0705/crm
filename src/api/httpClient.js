@@ -1,13 +1,10 @@
+import { ApiError } from './ApiError'
+import { formatError } from '../utils/formatError'
+import { handleDemoRequest } from './demoEngine'
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-export class ApiError extends Error {
-  constructor(message, { status, details } = {}) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.details = details
-  }
-}
+export { ApiError }
 
 let unauthorizedHandler = null
 
@@ -31,14 +28,6 @@ function buildUrl(path, params) {
   return url.toString()
 }
 
-async function parseResponse(res) {
-  const contentType = res.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    return res.json().catch(() => null)
-  }
-  return res.text().catch(() => null)
-}
-
 async function request(path, { method = 'GET', body, params, headers, signal } = {}) {
   // FormData (file uploads) must be sent as-is with no Content-Type header —
   // the browser sets the multipart boundary itself. Everything else is JSON.
@@ -58,34 +47,32 @@ async function request(path, { method = 'GET', body, params, headers, signal } =
       signal,
     })
   } catch (networkError) {
-    throw new ApiError('Serverga ulanib bo‘lmadi. Internetni yoki backend manzilini tekshiring.', {
-      status: 0,
-      details: networkError,
-    })
+    // A deliberate cancellation (AbortController) is not "no backend" — let
+    // it propagate so callers (e.g. GlobalSearch) keep ignoring it as usual.
+    if (networkError?.name === 'AbortError') throw networkError
+    // No real backend reachable at all — fall back to the in-browser demo
+    // data engine (see demoEngine.js) instead of surfacing a raw network
+    // error to the user.
+    return handleDemoRequest({ method, path, body, params })
   }
 
-  const data = await parseResponse(res)
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    // Something answered, but it isn't our JSON API — most commonly a
+    // static host's SPA fallback (index.html) or a platform error page for
+    // an undeployed /api/* route. Treat exactly like "no backend reachable"
+    // rather than handing HTML/plain-text to callers that expect JSON.
+    return handleDemoRequest({ method, path, body, params })
+  }
+
+  const data = await res.json().catch(() => null)
 
   if (res.status === 401) {
     unauthorizedHandler?.()
   }
 
   if (!res.ok) {
-    const message = (data && (data.message || data.error)) || `So‘rov bajarilmadi (${res.status})`
-    throw new ApiError(message, { status: res.status, details: data })
-  }
-
-  // A 2xx response whose body isn't JSON almost always means the request
-  // never reached the real API — most commonly a static host's SPA fallback
-  // serving index.html back for an unmatched /api/* path (no backend
-  // deployed, or VITE_API_BASE_URL missing/wrong). Treat that as a real
-  // failure instead of silently handing HTML to callers that expect JSON.
-  const contentType = res.headers.get('content-type') || ''
-  if (!contentType.includes('application/json')) {
-    throw new ApiError(
-      'Server kutilmagan javob qaytardi. Backend ulanmagan yoki VITE_API_BASE_URL noto‘g‘ri sozlangan bo‘lishi mumkin.',
-      { status: res.status, details: data }
-    )
+    throw new ApiError(formatError(data, `So‘rov bajarilmadi (${res.status})`), { status: res.status, details: data })
   }
 
   return data

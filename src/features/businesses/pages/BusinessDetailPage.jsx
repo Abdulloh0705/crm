@@ -6,6 +6,8 @@ import { customersService } from '../../../services/customers.service'
 import { employeesService } from '../../../services/employees.service'
 import { BusinessForm } from '../components/BusinessForm'
 import { BUSINESS_STATUS_LABELS } from '../businesses.constants'
+import { PAYMENT_STATUS_LABELS } from '../../payments/payments.constants'
+import { INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { Card } from '../../../components/Card/Card'
 import { Badge } from '../../../components/Badge/Badge'
 import { Button } from '../../../components/Button/Button'
@@ -228,7 +230,7 @@ export function BusinessDetailPage() {
           title="To‘lovlar"
           fetcher={() => businessesService.getPayments(id)}
           deps={[id]}
-          renderItem={(item) => <span>{item.amount} — {item.status}</span>}
+          renderItem={(item) => <span>{item.amount} — {PAYMENT_STATUS_LABELS[item.status] || item.status}</span>}
           emptyHint="Bu biznes uchun hali to‘lov qayd etilmagan."
         />
         <RelatedList
@@ -236,7 +238,7 @@ export function BusinessDetailPage() {
           fetcher={() => businessesService.getInstallations(id)}
           deps={[id]}
           linkTo={(item) => `/admin/crm/installations/${item.id}`}
-          renderItem={(item) => <span>{item.status}</span>}
+          renderItem={(item) => <span>{INSTALLATION_STATUS_LABELS[item.status] || item.status}</span>}
           emptyHint="Bu biznes uchun hali o‘rnatish rejalashtirilmagan."
         />
       </div>
