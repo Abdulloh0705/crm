@@ -1,8 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { authService } from '../../services/auth.service'
 import { setUnauthorizedHandler } from '../../api/httpClient'
+import { ROLES } from '../roles/permissions'
 
 const AuthContext = createContext(null)
+
+// ---------------------------------------------------------------------------
+// TEMPORARY DEMO BYPASS — requested to unblock viewing the deployed UI while
+// the Vercel backend isn't reliable yet. Skips the real /auth/me check and
+// always presents a stub SUPER_ADMIN session instead of showing the login
+// screen. REMOVE this block (and just call hydrateSession's original body)
+// once the real backend is connected and login should be required again.
+const DEMO_BYPASS_AUTH = true
+const DEMO_USER = {
+  id: 'demo-user',
+  name: 'Demo foydalanuvchi',
+  email: 'demo@bold-yechim.uz',
+  role: ROLES.SUPER_ADMIN,
+  permissions: [],
+  status: 'active',
+}
+// ---------------------------------------------------------------------------
 
 // status: 'checking' | 'authenticated' | 'unauthenticated'
 export function AuthProvider({ children }) {
@@ -17,6 +35,11 @@ export function AuthProvider({ children }) {
       setUser(currentUser)
       setStatus('authenticated')
     } catch {
+      if (DEMO_BYPASS_AUTH) {
+        setUser(DEMO_USER)
+        setStatus('authenticated')
+        return
+      }
       setUser(null)
       setStatus('unauthenticated')
     }
