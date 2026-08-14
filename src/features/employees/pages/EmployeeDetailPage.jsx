@@ -10,14 +10,21 @@ import { Avatar } from '../../../components/Avatar/Avatar'
 import { Button } from '../../../components/Button/Button'
 import { Alert } from '../../../components/Alert/Alert'
 import { Spinner } from '../../../components/Spinner/Spinner'
+import { Modal } from '../../../components/Modal/Modal'
+import { FormField } from '../../../components/FormField/FormField'
+import { PasswordInput } from '../../../components/PasswordInput/PasswordInput'
 import { RelatedList } from '../../../components/RelatedList/RelatedList'
 import { StatCard } from '../../../components/charts/StatCard'
 import { PermissionGate } from '../../roles/PermissionGate'
+import { PermissionMatrix } from '../../roles/components/PermissionMatrix'
 import { useAsync } from '../../../hooks/useAsync'
 import { useAction } from '../../../hooks/useAction'
+import { useDisclosure } from '../../../hooks/useDisclosure'
+import { useConfirm } from '../../../store/ConfirmContext'
 import { useToast } from '../../../store/ToastContext'
+import { validate, rules } from '../../../utils/validators'
 import { formatDate } from '../../../utils/formatDate'
-import { ROLE_LABELS } from '../../roles/permissions'
+import { ROLE_LABELS, ROLE_DEFAULT_PERMISSIONS } from '../../roles/permissions'
 import { InboxIcon, BuildingIcon, DashboardIcon, TeamIcon, UsersIcon } from '../../../components/icons/Icons'
 import './EmployeeDetailPage.scss'
 
@@ -48,15 +55,110 @@ function PerformanceSection({ employeeId }) {
   )
 }
 
+function ManagePermissionsModal({ employee, isOpen, onClose, onSaved }) {
+  const [permissions, setPermissions] = useState(employee.permissions ?? [])
+  const updateAction = useAction((payload) => employeesService.update(employee.id, payload))
+  const toast = useToast()
+
+  const handleSave = async () => {
+    try {
+      await updateAction.run({ permissions })
+      toast.success('Ruxsatlar yangilandi')
+      onSaved()
+    } catch (err) {
+      toast.error(err.message || 'Ruxsatlarni saqlashda xatolik yuz berdi')
+    }
+  }
+
+  return (
+    <Modal open={isOpen} title={`${employee.name} — ruxsatlarni boshqarish`} onClose={onClose}>
+      <div className="permissions-modal__actions">
+        <Button type="button" variant="ghost" size="sm" onClick={() => setPermissions(ROLE_DEFAULT_PERMISSIONS[employee.role] ?? [])}>
+          Rol standart ruxsatlariga qaytarish
+        </Button>
+      </div>
+      <PermissionMatrix value={permissions} onChange={setPermissions} />
+      <div className="card__footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={updateAction.loading}>
+          Bekor qilish
+        </Button>
+        <Button type="button" loading={updateAction.loading} onClick={handleSave}>
+          Saqlash
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
+function UpdatePasswordModal({ employeeId, isOpen, onClose, onSaved }) {
+  const [values, setValues] = useState({ password: '', confirmPassword: '' })
+  const [errors, setErrors] = useState({})
+  const updateAction = useAction((payload) => employeesService.update(employeeId, payload))
+  const toast = useToast()
+
+  const handleChange = (field) => (event) => setValues((v) => ({ ...v, [field]: event.target.value }))
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const nextErrors = validate(values, { password: [rules.required('Yangi parol kiritilishi shart')] })
+    if (!nextErrors.password && values.password !== values.confirmPassword) {
+      nextErrors.confirmPassword = 'Parollar mos kelmadi'
+    }
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+
+    try {
+      await updateAction.run({ password: values.password })
+      toast.success('Parol yangilandi')
+      setValues({ password: '', confirmPassword: '' })
+      onSaved()
+    } catch (err) {
+      toast.error(err.message || 'Parolni yangilashda xatolik yuz berdi')
+    }
+  }
+
+  return (
+    <Modal open={isOpen} title="Parolni yangilash" onClose={onClose}>
+      <form onSubmit={handleSubmit} noValidate>
+        <FormField label="Yangi parol" required error={errors.password}>
+          <PasswordInput value={values.password} onChange={handleChange('password')} error={!!errors.password} disabled={updateAction.loading} />
+        </FormField>
+        <FormField label="Parolni tasdiqlash" error={errors.confirmPassword}>
+          <PasswordInput
+            value={values.confirmPassword}
+            onChange={handleChange('confirmPassword')}
+            error={!!errors.confirmPassword}
+            disabled={updateAction.loading}
+          />
+        </FormField>
+        <div className="card__footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={updateAction.loading}>
+            Bekor qilish
+          </Button>
+          <Button type="submit" loading={updateAction.loading}>
+            Saqlash
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 export function EmployeeDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const isEditing = searchParams.get('edit') === '1'
   const toast = useToast()
+  const confirm = useConfirm()
+  const permissionsModal = useDisclosure()
+  const passwordModal = useDisclosure()
 
   const { data: employee, loading, error, refetch } = useEmployee(id)
   const updateAction = useAction((values) => employeesService.update(id, values))
+  const toggleStatusAction = useAction((payload) =>
+    payload.status === 'active' ? employeesService.activate(id) : employeesService.deactivate(id)
+  )
   const [teams] = useState([])
 
   const handleUpdate = async (values) => {
@@ -67,6 +169,24 @@ export function EmployeeDetailPage() {
       refetch()
     } catch (err) {
       toast.error(err.message || 'Yangilashda xatolik yuz berdi')
+    }
+  }
+
+  const handleToggleStatus = async () => {
+    const activating = employee.status !== 'active'
+    const ok = await confirm({
+      title: activating ? 'Xodimni faollashtirish' : 'Xodimni faolsizlantirish',
+      description: `${employee.name} ${activating ? 'faollashtirilsinmi' : 'faolsizlantirilsinmi'}?`,
+      confirmLabel: activating ? 'Faollashtirish' : 'Faolsizlantirish',
+      danger: !activating,
+    })
+    if (!ok) return
+    try {
+      await toggleStatusAction.run({ status: activating ? 'active' : 'inactive' })
+      toast.success('Holat yangilandi')
+      refetch()
+    } catch (err) {
+      toast.error(err.message || 'Holatni yangilashda xatolik yuz berdi')
     }
   }
 
@@ -102,6 +222,19 @@ export function EmployeeDetailPage() {
             Ortga
           </Button>
           <PermissionGate permission="employees.edit">
+            <Button variant="secondary" onClick={passwordModal.open}>
+              Parolni yangilash
+            </Button>
+            <Button variant="secondary" onClick={permissionsModal.open}>
+              Ruxsatlarni boshqarish
+            </Button>
+            <Button
+              variant={employee.status === 'active' ? 'danger-ghost' : 'secondary'}
+              loading={toggleStatusAction.loading}
+              onClick={handleToggleStatus}
+            >
+              {employee.status === 'active' ? 'Faolsizlantirish' : 'Faollashtirish'}
+            </Button>
             <Button onClick={() => setSearchParams({ edit: '1' })}>Tahrirlash</Button>
           </PermissionGate>
         </div>
@@ -130,6 +263,10 @@ export function EmployeeDetailPage() {
               <div className="detail-field__value">{employee.phone || '—'}</div>
             </div>
             <div className="detail-field">
+              <div className="detail-field__label">Login</div>
+              <div className="detail-field__value">{employee.username || '—'}</div>
+            </div>
+            <div className="detail-field">
               <div className="detail-field__label">Jamoa</div>
               <div className="detail-field__value">{employee.team?.name || '—'}</div>
             </div>
@@ -141,24 +278,28 @@ export function EmployeeDetailPage() {
         </Card>
       )}
 
+      <Card title="Ruxsatlar">
+        <PermissionMatrix value={employee.permissions ?? []} />
+      </Card>
+
       <PerformanceSection employeeId={id} />
 
       <div className="detail-grid">
         <RelatedList
-          title="Biriktirilgan lidlar"
+          title="Biriktirilgan murojaatlar"
           fetcher={() => employeesService.getAssignedLeads(id)}
           deps={[id]}
           linkTo={(item) => `/admin/crm/leads/${item.id}`}
           renderItem={(item) => <span>{item.title}</span>}
-          emptyHint="Bu xodimga hali lead biriktirilmagan."
+          emptyHint="Bu xodimga hali murojaat biriktirilmagan."
         />
         <RelatedList
-          title="Biriktirilgan bitimlar"
+          title="Biriktirilgan savdolar"
           fetcher={() => employeesService.getAssignedDeals(id)}
           deps={[id]}
           linkTo={(item) => `/admin/crm/deals/${item.id}`}
           renderItem={(item) => <span>{item.name}</span>}
-          emptyHint="Bu xodimga hali deal biriktirilmagan."
+          emptyHint="Bu xodimga hali savdo biriktirilmagan."
         />
         <RelatedList
           title="Biriktirilgan o‘rnatishlar"
@@ -176,6 +317,22 @@ export function EmployeeDetailPage() {
           emptyHint="Bu xodimga hali vazifa biriktirilmagan."
         />
       </div>
+
+      <ManagePermissionsModal
+        employee={employee}
+        isOpen={permissionsModal.isOpen}
+        onClose={permissionsModal.close}
+        onSaved={() => {
+          permissionsModal.close()
+          refetch()
+        }}
+      />
+      <UpdatePasswordModal
+        employeeId={id}
+        isOpen={passwordModal.isOpen}
+        onClose={passwordModal.close}
+        onSaved={() => passwordModal.close()}
+      />
     </div>
   )
 }

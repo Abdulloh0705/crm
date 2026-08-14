@@ -15,7 +15,7 @@ import {
 import './Sidebar.scss'
 
 const CRM_LINKS = [
-  { to: '/admin/crm/dashboard', label: 'CRM statistikasi', permission: null },
+  { to: '/admin/crm/dashboard', label: 'CRM statistikasi', permission: 'dashboard.view' },
   { to: '/admin/crm/customers', label: 'Mijozlar', permission: 'customers.view' },
   { to: '/admin/crm/businesses', label: 'Bizneslar', permission: 'businesses.view' },
   { to: '/admin/crm/leads', label: 'Murojaatlar', permission: 'leads.view' },
@@ -50,17 +50,19 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar__nav">
-          <NavLink
-            to="/admin"
-            end
-            className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
-            onClick={closeMobileSidebar}
-          >
-            <span className="sidebar__link-icon">
-              <DashboardIcon />
-            </span>
-            <span className="sidebar__link-label">Boshqaruv paneli</span>
-          </NavLink>
+          {can('dashboard.view') && (
+            <NavLink
+              to="/admin"
+              end
+              className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
+              onClick={closeMobileSidebar}
+            >
+              <span className="sidebar__link-icon">
+                <DashboardIcon />
+              </span>
+              <span className="sidebar__link-label">Boshqaruv paneli</span>
+            </NavLink>
+          )}
 
           <NavLink
             to="/admin/my-work"

@@ -86,7 +86,14 @@ export function AppRoutes() {
 
           {/* CRM business flow: Customer -> Business -> Lead -> Deal ->
               Deal Items -> Quotation -> Payment -> Installation -> Activity/Task */}
-          <Route path="crm/dashboard" element={<CrmDashboardPage />} />
+          <Route
+            path="crm/dashboard"
+            element={
+              <RequirePermission permission="dashboard.view">
+                <CrmDashboardPage />
+              </RequirePermission>
+            }
+          />
 
           <Route
             path="crm/customers"

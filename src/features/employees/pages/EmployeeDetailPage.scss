@@ -30,3 +30,8 @@
     @include m.flex(center, flex-end, v.$space-2);
   }
 }
+
+.permissions-modal__actions {
+  @include m.flex(center, flex-end);
+  margin-bottom: v.$space-2;
+}

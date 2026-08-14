@@ -118,3 +118,27 @@ export const InboxIcon = (props) => (
     <path d="M5.5 5h13l2.5 7v7a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19v-7l2.5-7z" />
   </svg>
 )
+
+export const EyeIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+)
+
+export const EyeOffIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.5 7 10 7c1.4 0 2.7-.3 3.9-.8" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </svg>
+)
+
+export const RefreshIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
+    <path d="M3 21v-5h5" />
+  </svg>
+)

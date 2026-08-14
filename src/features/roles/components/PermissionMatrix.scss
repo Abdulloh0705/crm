@@ -1,4 +1,32 @@
 @use '../../../styles/abstracts/variables' as v;
+@use '../../../styles/abstracts/mixins' as m;
+
+.permission-matrix-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.permission-matrix__select-all {
+  @include m.flex(center, flex-start, v.$space-2);
+  align-self: flex-start;
+  font-size: v.$font-size-sm;
+  font-weight: v.$font-weight-medium;
+  color: v.$color-text-primary;
+  cursor: pointer;
+  padding: v.$space-1 v.$space-2;
+  border-radius: v.$radius-sm;
+
+  &:hover {
+    background: v.$color-gray-50;
+  }
+}
+
+.permission-matrix__row-select {
+  @include m.flex(center, flex-start, v.$space-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
 
 .permission-matrix {
   width: 100%;

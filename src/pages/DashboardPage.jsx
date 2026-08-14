@@ -3,6 +3,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { GlassCard } from '../components/GlassCard/GlassCard'
 import { Button } from '../components/Button/Button'
 import { ROLE_LABELS } from '../features/roles/permissions'
+import { PermissionGate } from '../features/roles/PermissionGate'
 import './DashboardPage.scss'
 
 export function DashboardPage() {
@@ -26,9 +27,11 @@ export function DashboardPage() {
           bo‘limida ko‘rishingiz mumkin. Kundalik ishlaringiz esa “Mening ishlarim” bo‘limida to‘planadi.
         </p>
         <div className="dashboard-welcome__actions">
-          <Link to="/admin/crm/dashboard">
-            <Button>CRM statistikasini ko‘rish</Button>
-          </Link>
+          <PermissionGate permission="dashboard.view">
+            <Link to="/admin/crm/dashboard">
+              <Button>CRM statistikasini ko‘rish</Button>
+            </Link>
+          </PermissionGate>
           <Link to="/admin/my-work">
             <Button variant="secondary">Mening ishlarim</Button>
           </Link>

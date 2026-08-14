@@ -15,6 +15,7 @@ import { Card } from '../../../components/Card/Card'
 import { Alert } from '../../../components/Alert/Alert'
 import { Spinner } from '../../../components/Spinner/Spinner'
 import { EmptyState } from '../../../components/EmptyState/EmptyState'
+import { PermissionGate } from '../../roles/PermissionGate'
 import {
   DashboardIcon,
   UsersIcon,
@@ -65,7 +66,9 @@ export function CrmDashboardPage() {
         <StatCard label="Jami murojaatlar" value={s.totalLeads} icon={<InboxIcon width={20} height={20} />} loading={summary.loading} />
         <StatCard label="Faol savdolar" value={s.activeDeals} icon={<BuildingIcon width={20} height={20} />} variant="info" loading={summary.loading} />
         <StatCard label="Yutilgan savdolar" value={s.wonDeals} icon={<DashboardIcon width={20} height={20} />} variant="success" loading={summary.loading} />
-        <StatCard label="Tushum" value={s.revenue} icon={<DashboardIcon width={20} height={20} />} variant="gold" loading={summary.loading} />
+        <PermissionGate permission="profit.view">
+          <StatCard label="Tushum" value={s.revenue} icon={<DashboardIcon width={20} height={20} />} variant="gold" loading={summary.loading} />
+        </PermissionGate>
         <StatCard label="Kutilayotgan to‘lovlar" value={s.pendingPayments} icon={<InboxIcon width={20} height={20} />} variant="warning" loading={summary.loading} />
         <StatCard label="O‘rnatishlar" value={s.installations} icon={<TeamIcon width={20} height={20} />} loading={summary.loading} />
         <StatCard label="Vazifalar" value={s.tasks} icon={<UsersIcon width={20} height={20} />} loading={summary.loading} />
@@ -78,9 +81,11 @@ export function CrmDashboardPage() {
         <ChartCard title="Savdo jarayoni" loading={dealsByStage.loading} error={dealsByStage.error} empty={!dealsByStage.data?.length}>
           <BarChart data={(dealsByStage.data ?? []).map((d) => ({ label: d.stage, value: d.count }))} />
         </ChartCard>
-        <ChartCard title="Tushum" loading={revenue.loading} error={revenue.error} empty={!revenue.data?.length}>
-          <BarChart data={(revenue.data ?? []).map((d) => ({ label: d.period, value: d.amount }))} />
-        </ChartCard>
+        <PermissionGate permission="profit.view">
+          <ChartCard title="Tushum" loading={revenue.loading} error={revenue.error} empty={!revenue.data?.length}>
+            <BarChart data={(revenue.data ?? []).map((d) => ({ label: d.period, value: d.amount }))} />
+          </ChartCard>
+        </PermissionGate>
         <ChartCard
           title="O‘rnatishlar"
           loading={installationsByStatus.loading}
