@@ -56,8 +56,16 @@ async function request(path, { method = 'GET', body, params, headers, signal } =
     return handleDemoRequest({ method, path, body, params })
   }
 
+  // Vercel's own platform-level error page (undeployed/unreachable /api/*
+  // route) always sets this header — and, depending on the request's Accept
+  // header, can render its body as either text/plain OR
+  // application/json (e.g. {"error":{"code":"404",...}}), so a content-type
+  // check alone isn't reliable. This header is never present on a real
+  // response from our Express app, so it's a safe, unambiguous signal.
+  const isVercelPlatformError = res.headers.has('x-vercel-error')
+
   const contentType = res.headers.get('content-type') || ''
-  if (!contentType.includes('application/json')) {
+  if (isVercelPlatformError || !contentType.includes('application/json')) {
     // Something answered, but it isn't our JSON API — most commonly a
     // static host's SPA fallback (index.html) or a platform error page for
     // an undeployed /api/* route. Treat exactly like "no backend reachable"
