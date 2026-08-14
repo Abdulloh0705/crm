@@ -75,6 +75,19 @@ async function request(path, { method = 'GET', body, params, headers, signal } =
     throw new ApiError(message, { status: res.status, details: data })
   }
 
+  // A 2xx response whose body isn't JSON almost always means the request
+  // never reached the real API — most commonly a static host's SPA fallback
+  // serving index.html back for an unmatched /api/* path (no backend
+  // deployed, or VITE_API_BASE_URL missing/wrong). Treat that as a real
+  // failure instead of silently handing HTML to callers that expect JSON.
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      'Server kutilmagan javob qaytardi. Backend ulanmagan yoki VITE_API_BASE_URL noto‘g‘ri sozlangan bo‘lishi mumkin.',
+      { status: res.status, details: data }
+    )
+  }
+
   return data
 }
 
