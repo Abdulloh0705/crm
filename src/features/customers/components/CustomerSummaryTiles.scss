@@ -11,13 +11,14 @@
   &__tile {
     @include m.card-surface;
     padding: v.$space-2 v.$space-3;
+    border-radius: v.$radius-lg;
   }
 
   &__label {
     font-size: v.$font-size-xs;
     color: v.$color-text-muted;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
   }
 
   &__value {

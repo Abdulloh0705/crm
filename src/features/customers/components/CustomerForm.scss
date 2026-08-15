@@ -2,9 +2,11 @@
 @use '../../../styles/abstracts/mixins' as m;
 
 .customer-form-section {
-  border: 1px solid v.$color-border;
-  border-radius: v.$radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: v.$radius-xl;
+  background: rgba(255, 255, 255, 0.38);
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
 
   &__toggle {
     width: 100%;
@@ -13,7 +15,7 @@
     font-size: v.$font-size-sm;
     font-weight: v.$font-weight-semibold;
     color: v.$color-text-primary;
-    background: v.$color-gray-50;
+    background: rgba(255, 255, 255, 0.46);
   }
 
   &__chevron {

@@ -8,9 +8,12 @@
 
   &--fallback {
     @include m.flex(center, center);
-    background: linear-gradient(135deg, v.$color-primary-100, v.$color-primary-200);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0)),
+      linear-gradient(135deg, v.$color-primary-100, #d7e7ff 54%, #ffd8ea);
     color: v.$color-primary-700;
     font-weight: v.$font-weight-semibold;
+    border: 1px solid rgba(255, 255, 255, 0.68);
   }
 
   &--sm {

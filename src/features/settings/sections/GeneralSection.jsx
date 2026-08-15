@@ -9,7 +9,7 @@ export function GeneralSection() {
   return (
     <Card title="Umumiy sozlamalar">
       <FormField label="Kompaniya nomi" hint="Backend tayyor bo‘lgach ushbu maydon saqlanadi">
-        <Input placeholder="BOLD YECHIM" disabled />
+        <Input placeholder="YECHIM" disabled />
       </FormField>
       <FormField label="Vaqt mintaqasi">
         <Input placeholder="Asia/Tashkent" disabled />

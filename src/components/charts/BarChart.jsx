@@ -2,7 +2,7 @@ import './BarChart.scss'
 
 // Palette mirrors styles/abstracts/_variables.scss — kept in sync manually
 // since SCSS variables aren't reachable from JS without an extra build step.
-const COLORS = ['#6d5ef8', '#22a06b', '#c9a257', '#4a80d9', '#d1554f', '#9791b3']
+const COLORS = ['#2f89ae', '#22a06b', '#c9a257', '#73a992', '#d1554f', '#919e97']
 
 export function BarChart({ data = [], height = 28 }) {
   const max = Math.max(1, ...data.map((d) => d.value))

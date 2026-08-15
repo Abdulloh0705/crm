@@ -12,8 +12,31 @@ import { INSTALLATION_STATUS_LABELS, INSTALLATION_STATUS_BADGE_VARIANTS } from '
 // workspace as an overlay over this same list, Bitrix-style. "Tahrirlash"
 // lives inside the workspace itself once it's open, not as a separate entry
 // point here.
-export function CustomerTable({ customers, onDeactivate, onOpen }) {
+export function CustomerTable({ customers, stageLabels = CUSTOMER_STAGE_LABELS, selectedIds = [], onSelect, onSelectAll, onDeactivate, onOpen }) {
+  const selectedSet = new Set(selectedIds)
+  const allVisibleSelected = customers.length > 0 && customers.every((customer) => selectedSet.has(customer.id))
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={(event) => onSelectAll?.(event.target.checked)}
+          aria-label="Barcha mijozlarni tanlash"
+        />
+      ),
+      width: 42,
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedSet.has(row.id)}
+          onChange={(event) => onSelect?.(row.id, event.target.checked)}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`${row.name} tanlash`}
+        />
+      ),
+    },
     { key: 'name', header: 'Mijoz', render: (row) => <span className="table__cell-primary">{row.name}</span> },
     { key: 'phone', header: 'Telefon', render: (row) => row.phone || '—' },
     { key: 'business', header: 'Biznes', render: (row) => row.business?.name || '—' },
@@ -36,7 +59,7 @@ export function CustomerTable({ customers, onDeactivate, onOpen }) {
     {
       key: 'stage',
       header: 'Status',
-      render: (row) => <Badge variant={CUSTOMER_STAGE_BADGE_VARIANTS[row.stage] || 'gray'}>{CUSTOMER_STAGE_LABELS[row.stage] || row.stage}</Badge>,
+      render: (row) => <Badge variant={CUSTOMER_STAGE_BADGE_VARIANTS[row.stage] || 'gray'}>{stageLabels[row.stage] || row.stage}</Badge>,
     },
     {
       key: 'paymentStatus',

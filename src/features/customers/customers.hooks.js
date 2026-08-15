@@ -3,14 +3,15 @@ import { useAsync } from '../../hooks/useAsync'
 import { customersService } from '../../services/customers.service'
 
 const VIEW_STORAGE_KEY = 'bold-yechim-customers-view'
-const VALID_VIEWS = ['list', 'card', 'kanban']
+const VALID_VIEWS = ['list', 'kanban']
+const KANBAN_PAGE_SIZE = 200
 
 function loadStoredView() {
   try {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY)
-    return VALID_VIEWS.includes(stored) ? stored : 'list'
+    return VALID_VIEWS.includes(stored) ? stored : 'kanban'
   } catch {
-    return 'list'
+    return 'kanban'
   }
 }
 
@@ -43,8 +44,22 @@ export function useCustomers() {
     ]
   )
   const kanbanQuery = useAsync(
-    () => (view === 'kanban' ? customersService.list({ ...params, page: 1, pageSize: 200 }) : Promise.resolve(null)),
-    [view, params.search, params.status, params.assignedEmployeeId, params.city, params.program, params.groupId, params.installationStatus, params.createdFrom, params.createdTo]
+    () => {
+      const kanbanParams = {
+        search: params.search,
+        status: params.status,
+        assignedEmployeeId: params.assignedEmployeeId,
+        city: params.city,
+        program: params.program,
+        groupId: params.groupId,
+        installationStatus: params.installationStatus,
+        createdFrom: params.createdFrom,
+        createdTo: params.createdTo,
+        sort: params.sort,
+      }
+      return view === 'kanban' ? loadKanbanCustomers(kanbanParams) : Promise.resolve(null)
+    },
+    [view, params.search, params.status, params.assignedEmployeeId, params.city, params.program, params.groupId, params.installationStatus, params.createdFrom, params.createdTo, params.sort]
   )
   const active = view === 'kanban' ? kanbanQuery : listQuery
 
@@ -92,6 +107,21 @@ export function useCustomers() {
     error: active.error,
     refetch: active.refetch,
   }
+}
+
+async function loadKanbanCustomers(params) {
+  const firstPage = await customersService.list({ ...params, page: 1, pageSize: KANBAN_PAGE_SIZE })
+  const items = [...(firstPage?.items ?? [])]
+  const total = Number(firstPage?.total ?? items.length)
+  const pageSize = Number(firstPage?.pageSize ?? KANBAN_PAGE_SIZE) || KANBAN_PAGE_SIZE
+  const pageCount = Math.ceil(total / pageSize)
+
+  for (let page = 2; page <= pageCount; page += 1) {
+    const nextPage = await customersService.list({ ...params, page, pageSize })
+    items.push(...(nextPage?.items ?? []))
+  }
+
+  return { ...firstPage, items, total, page: 1, pageSize: items.length || pageSize }
 }
 
 export function useCustomer(id) {

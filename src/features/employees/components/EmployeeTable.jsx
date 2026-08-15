@@ -8,6 +8,10 @@ import { formatDate } from '../../../utils/formatDate'
 import { MoreIcon } from '../../../components/icons/Icons'
 import { ROLE_LABELS } from '../../roles/permissions'
 
+function formatMoney(value) {
+  return `${Number(value || 0).toLocaleString('ru-RU')} so‘m`
+}
+
 export function EmployeeTable({ employees, onToggleStatus }) {
   const navigate = useNavigate()
 
@@ -33,6 +37,19 @@ export function EmployeeTable({ employees, onToggleStatus }) {
       ),
     },
     { key: 'role', header: 'Rol', render: (row) => ROLE_LABELS[row.role] || row.role },
+    {
+      key: 'performance',
+      header: 'Natija',
+      render: (row) => (
+        <div>
+          <div>{row.performance?.customers ?? 0} mijoz</div>
+          <div className="table__cell-muted">{formatMoney(row.performance?.revenue)}</div>
+          <div className="table__cell-muted">
+            {row.performance?.tasksCompleted ?? 0} bajarildi / {row.performance?.tasksInProgress ?? 0} jarayonda
+          </div>
+        </div>
+      ),
+    },
     { key: 'team', header: 'Jamoa', render: (row) => row.team?.name || '—' },
     { key: 'status', header: 'Holat', render: (row) => <EmployeeStatusBadge status={row.status} /> },
     { key: 'createdAt', header: 'Qo‘shilgan', render: (row) => formatDate(row.createdAt) },

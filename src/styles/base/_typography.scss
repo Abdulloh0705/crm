@@ -6,7 +6,7 @@ body {
   color: v.$color-text-primary;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 h1,
@@ -16,7 +16,7 @@ h4 {
   font-weight: v.$font-weight-semibold;
   line-height: 1.25;
   color: v.$color-text-primary;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 h1 {
@@ -44,7 +44,7 @@ h4 {
 .stat-value {
   font-size: v.$font-size-3xl;
   font-weight: v.$font-weight-bold;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   color: v.$color-text-primary;
   font-variant-numeric: tabular-nums;
 }

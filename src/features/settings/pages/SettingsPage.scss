@@ -18,6 +18,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: v.$space-2;
+  border-radius: v.$radius-xl;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), v.$shadow-sm;
 
   @include m.respond-up(v.$breakpoint-md) {
     width: 220px;
@@ -34,13 +41,16 @@
     transition: background-color v.$transition-fast, color v.$transition-fast;
 
     &:hover {
-      background: v.$color-gray-100;
+      background: rgba(255, 255, 255, 0.62);
       color: v.$color-text-primary;
     }
 
     &--active {
-      background: v.$color-primary-50;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(245, 243, 255, 0.56)),
+        rgba(125, 92, 246, 0.12);
       color: v.$color-primary-700;
+      box-shadow: v.$shadow-sm;
     }
   }
 }

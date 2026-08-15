@@ -7,7 +7,7 @@ export const TASK_PRIORITY_BADGE_VARIANTS = { LOW: 'gray', MEDIUM: 'info', HIGH:
 export const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 
 export const TASK_STATUS_LABELS = {
-  TODO: 'Bajarilmagan',
+  TODO: 'Yangi',
   IN_PROGRESS: 'Jarayonda',
   COMPLETED: 'Bajarildi',
   CANCELLED: 'Bekor qilindi',

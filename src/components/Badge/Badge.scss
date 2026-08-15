@@ -10,7 +10,8 @@
   font-size: v.$font-size-xs;
   font-weight: v.$font-weight-semibold;
   white-space: nowrap;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
+  border: 1px solid rgba(255, 255, 255, 0.52);
 
   &::before {
     content: '';
@@ -21,32 +22,32 @@
   }
 
   &--gray {
-    background: v.$color-gray-100;
+    background: rgba(255, 255, 255, 0.54);
     color: v.$color-gray-600;
   }
 
   &--success {
-    background: v.$color-success-50;
+    background: rgba(234, 250, 241, 0.76);
     color: v.$color-success-700;
   }
 
   &--warning {
-    background: v.$color-warning-50;
+    background: rgba(255, 246, 231, 0.78);
     color: v.$color-warning-700;
   }
 
   &--danger {
-    background: v.$color-danger-50;
+    background: rgba(255, 240, 242, 0.78);
     color: v.$color-danger-700;
   }
 
   &--info {
-    background: v.$color-info-50;
+    background: rgba(238, 246, 255, 0.78);
     color: v.$color-info-700;
   }
 
   &--primary {
-    background: v.$color-primary-50;
+    background: rgba(245, 243, 255, 0.82);
     color: v.$color-primary-700;
   }
 

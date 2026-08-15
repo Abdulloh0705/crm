@@ -11,19 +11,19 @@ const TITLE_MAP = [
   { prefix: '/admin/settings', title: 'Sozlamalar' },
   { prefix: '/admin/profile', title: 'Profil' },
   { prefix: '/admin/my-work', title: 'Mening ishlarim' },
+  { prefix: '/admin/tasks', title: 'Vazifalar' },
   { prefix: '/admin/crm/customers', title: 'Mijozlar' },
   { prefix: '/admin/crm/businesses', title: 'Bizneslar' },
   { prefix: '/admin/crm/leads', title: 'Murojaatlar' },
   { prefix: '/admin/crm/deals', title: 'Savdolar' },
   { prefix: '/admin/crm/quotations', title: 'Takliflar' },
   { prefix: '/admin/crm/payments', title: 'To‘lovlar' },
-  { prefix: '/admin/crm/tasks', title: 'Vazifalar' },
   { prefix: '/admin/crm/activities', title: 'Faoliyatlar' },
   { prefix: '/admin/crm/installations', title: 'O‘rnatishlar' },
 ]
 
 function resolveTitle(pathname) {
-  return TITLE_MAP.find((entry) => pathname.startsWith(entry.prefix))?.title || 'BOLD YECHIM'
+  return TITLE_MAP.find((entry) => pathname.startsWith(entry.prefix))?.title || 'YECHIM'
 }
 
 export function AdminLayout() {

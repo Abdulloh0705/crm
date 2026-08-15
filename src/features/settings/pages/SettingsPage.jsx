@@ -6,6 +6,7 @@ import { EmployeesSection } from '../sections/EmployeesSection'
 import { ProgramCatalogSection } from '../sections/ProgramCatalogSection'
 import { CustomerFieldsSection } from '../sections/CustomerFieldsSection'
 import { ProfilePage } from '../../profile/pages/ProfilePage'
+import './SettingsPage.scss'
 
 // Registry pattern: adding a section later is just one more entry here plus
 // its section component — no routing changes needed. Jamoalar (Teams) is

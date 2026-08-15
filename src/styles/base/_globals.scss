@@ -12,6 +12,7 @@ body,
 
 body {
   background: transparent;
+  color: v.$color-text-primary;
 }
 
 .container {
@@ -34,7 +35,7 @@ body {
 .stack {
   display: flex;
   flex-direction: column;
-  gap: v.$space-5;
+  gap: v.$space-4;
 }
 
 .grid-2 {
@@ -75,19 +76,21 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: v.$space-6;
+  margin-bottom: v.$space-5;
   gap: v.$space-4;
   flex-wrap: wrap;
 
   &__title {
-    font-size: v.$font-size-xl;
+    font-size: v.$font-size-2xl;
     font-weight: v.$font-weight-semibold;
+    color: v.$color-gray-900;
+    line-height: 1.08;
   }
 
   &__subtitle {
     color: v.$color-text-secondary;
-    font-size: v.$font-size-sm;
-    margin-top: v.$space-1;
+    font-size: v.$font-size-xs;
+    margin-top: v.$space-2;
   }
 
   &__actions {
@@ -108,13 +111,79 @@ body {
 // page (Customers/Businesses/Leads/Deals/Payments/Tasks/Installations/...).
 .filters-row {
   @include m.flex(center, flex-start, v.$space-3);
-  margin-bottom: v.$space-4;
+  margin-bottom: v.$space-5;
   flex-wrap: wrap;
+  padding: v.$space-3;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: v.$radius-xl;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.32)),
+    rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), v.$shadow-sm;
 
   &__search {
-    max-width: 280px;
+    max-width: 420px;
     flex: 1;
-    min-width: 200px;
+    min-width: 260px;
+  }
+}
+
+.kanban-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: v.$space-3;
+  margin-top: v.$space-4;
+  padding: v.$space-3;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: v.$radius-xl;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), v.$shadow-sm;
+}
+
+.kanban-summary-bar__item {
+  min-width: 0;
+  padding: v.$space-2 v.$space-3;
+  border-radius: v.$radius-lg;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+}
+
+.kanban-summary-bar__label {
+  display: block;
+  font-size: v.$font-size-xs;
+  color: v.$color-text-muted;
+}
+
+.kanban-summary-bar__value {
+  display: block;
+  margin-top: 2px;
+  font-size: v.$font-size-sm;
+  font-weight: v.$font-weight-semibold;
+  color: v.$color-text-primary;
+  @include m.truncate;
+}
+
+@include m.respond-down(v.$breakpoint-lg) {
+  .kanban-summary-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@include m.respond-down(v.$breakpoint-sm) {
+  .page-header__title {
+    font-size: v.$font-size-xl;
+  }
+
+  .filters-row__search {
+    min-width: 100%;
+  }
+
+  .kanban-summary-bar {
+    grid-template-columns: 1fr;
   }
 }
 

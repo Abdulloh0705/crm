@@ -8,24 +8,40 @@ export const CUSTOMER_STATUS_LABELS = {
 // Mijoz bilan ishlash jarayoni (Bitrix-style pipeline) — customer.status
 // (active/inactive) dan alohida: bu mijozning savdo jarayonidagi bosqichi,
 // u esa hisobning faollik holati.
-export const CUSTOMER_STAGES = ['NEW', 'CONTACTED', 'ORDERED', 'PAID', 'INSTALLING', 'DONE']
+export const CUSTOMER_STAGES = [
+  'NEW',
+  'CONTACTED',
+  'IN_PROGRESS',
+  'FOLLOW_UP',
+  'FUTURE_SALE',
+  'DEPOSIT_RECEIVED',
+  'PAID',
+  'INSTALLATION_REQUIRED',
+  'INSTALLED',
+]
 
 export const CUSTOMER_STAGE_LABELS = {
   NEW: 'Yangi',
-  CONTACTED: 'Gaplashildi',
-  ORDERED: 'Buyurtma olindi',
+  CONTACTED: 'Gaplashilgan',
+  IN_PROGRESS: 'Jarayonda',
+  FOLLOW_UP: 'Qayta aloqaga chiqish',
+  FUTURE_SALE: 'Keyinchalik sotuv',
+  DEPOSIT_RECEIVED: 'Zaklad olingan',
   PAID: 'To‘lov qilindi',
-  INSTALLING: 'O‘rnatish',
-  DONE: 'Tugallandi',
+  INSTALLATION_REQUIRED: 'O‘rnatish kerak',
+  INSTALLED: 'O‘rnatib bo‘ldi',
 }
 
 export const CUSTOMER_STAGE_BADGE_VARIANTS = {
   NEW: 'gray',
   CONTACTED: 'info',
-  ORDERED: 'warning',
+  IN_PROGRESS: 'info',
+  FOLLOW_UP: 'warning',
+  FUTURE_SALE: 'gray',
+  DEPOSIT_RECEIVED: 'warning',
   PAID: 'primary',
-  INSTALLING: 'warning',
-  DONE: 'success',
+  INSTALLATION_REQUIRED: 'warning',
+  INSTALLED: 'success',
 }
 
 export const PROGRAM_STATUSES = ['NEW', 'INSTALLING', 'ACTIVE', 'SUSPENDED', 'EXPIRED']

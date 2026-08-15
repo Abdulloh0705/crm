@@ -3,8 +3,9 @@
  *
  * FOR LOCAL DEVELOPMENT/DEMO ONLY. Not production code: data lives in
  * memory and resets every restart (or every cold start, when running as a
- * Vercel serverless function — see /api/index.js), there's no real password
- * hashing, and validation is minimal. It exists purely so the real frontend
+ * Vercel serverless function — see /api/index.js), and validation is minimal.
+ * Demo passwords are still stored as salted hashes so the auth flow mirrors
+ * the real backend contract. It exists purely so the real frontend
  * (which talks to real REST endpoints) has something to talk to before the
  * real backend is built. Endpoints mirror src/api/endpoints.js exactly.
  *
@@ -28,12 +29,72 @@ app.use(cookieParser())
 // ---------------------------------------------------------------------------
 const uid = () => crypto.randomUUID()
 const now = () => new Date().toISOString()
+const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN']
+const PASSWORD_ITERATIONS = 120000
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.pbkdf2Sync(String(password), salt, PASSWORD_ITERATIONS, 32, 'sha256').toString('hex')
+  return `pbkdf2$${PASSWORD_ITERATIONS}$${salt}$${hash}`
+}
+
+function verifyPassword(password, stored) {
+  if (!stored) return false
+  if (!String(stored).startsWith('pbkdf2$')) return String(password) === String(stored)
+  const [, iterations, salt, expected] = String(stored).split('$')
+  const actual = crypto.pbkdf2Sync(String(password), salt, Number(iterations), 32, 'sha256').toString('hex')
+  return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'))
+}
+
+function isAdmin(user) {
+  return ADMIN_ROLES.includes(user?.role)
+}
+
+function hasPermission(user, permission) {
+  if (!user) return false
+  if (isAdmin(user)) return true
+  return Array.isArray(user.permissions) && user.permissions.includes(permission)
+}
+
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!hasPermission(req.user, permission)) {
+      return res.status(403).json({ message: 'Bu amal uchun ruxsat yo‘q' })
+    }
+    next()
+  }
+}
+
+function normalizeUserPayload(payload, { existingUser, allowPassword = false } = {}) {
+  const { password, confirmPassword, currentPassword, newPassword, ...rest } = payload || {}
+  const next = { ...rest }
+  if ((next.firstName || next.lastName) && !next.name) {
+    next.name = `${next.firstName || ''} ${next.lastName || ''}`.trim()
+  }
+  delete next.confirmPassword
+  delete next.currentPassword
+  delete next.newPassword
+  if (next.teamId) {
+    const team = db.teams.find((t) => t.id === next.teamId)
+    next.team = team ? { id: team.id, name: team.name } : null
+  }
+  if (allowPassword && password) next.password = hashPassword(password)
+  if (existingUser && next.email && db.users.some((u) => u.id !== existingUser.id && u.email === next.email)) {
+    throw new Error('Bu email allaqachon mavjud')
+  }
+  if (existingUser && next.username && db.users.some((u) => u.id !== existingUser.id && u.username === next.username)) {
+    throw new Error('Bu login allaqachon mavjud')
+  }
+  return next
+}
 
 const db = {
   sessions: new Map(), // sid -> userId
   users: [],
   teams: [],
   customers: [],
+  customerStages: [],
+  customerGroups: [],
   businesses: [],
   leads: [],
   deals: [],
@@ -49,7 +110,64 @@ const db = {
   notifications: [],
 }
 
+const DEFAULT_CUSTOMER_STAGES = [
+  { id: 'NEW', label: 'Yangi' },
+  { id: 'CONTACTED', label: 'Gaplashilgan' },
+  { id: 'IN_PROGRESS', label: 'Jarayonda' },
+  { id: 'FOLLOW_UP', label: 'Qayta aloqaga chiqish' },
+  { id: 'FUTURE_SALE', label: 'Keyinchalik sotuv' },
+  { id: 'DEPOSIT_RECEIVED', label: 'Zaklad olingan' },
+  { id: 'PAID', label: 'To‘lov qilindi' },
+  { id: 'INSTALLATION_REQUIRED', label: 'O‘rnatish kerak' },
+  { id: 'INSTALLED', label: 'O‘rnatib bo‘ldi' },
+]
+
+const LEGACY_CUSTOMER_STAGE_MAP = {
+  ORDERED: 'DEPOSIT_RECEIVED',
+  PAYMENT_PENDING: 'DEPOSIT_RECEIVED',
+  INSTALLING: 'INSTALLATION_REQUIRED',
+  DONE: 'INSTALLED',
+}
+
+function defaultCustomerStageId() {
+  return db.customerStages.find((item) => item.label === 'Yangi')?.id || 'NEW'
+}
+
+function normalizeCustomerStage(stage) {
+  const fallback = defaultCustomerStageId()
+  const mapped = LEGACY_CUSTOMER_STAGE_MAP[stage] || stage || fallback
+  return db.customerStages.some((item) => item.id === mapped) ? mapped : fallback
+}
+
+function normalizeCustomerAmount(amount) {
+  if (amount === '' || amount == null) return 0
+  const numeric = Number(amount)
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0
+}
+
+function normalizeCustomerRecord(customer) {
+  customer.stage = normalizeCustomerStage(customer.stage)
+  customer.amount = normalizeCustomerAmount(customer.amount)
+  customer.programs = Array.isArray(customer.programs)
+    ? customer.programs.map((program) => ({
+        id: program.id || uid(),
+        version: '',
+        startDate: '',
+        installedDate: '',
+        status: 'NEW',
+        subscriptionUntil: '',
+        notes: '',
+        createdAt: program.createdAt || now(),
+        ...program,
+      }))
+    : []
+  customer.groupIds = Array.isArray(customer.groupIds) ? customer.groupIds : []
+  return customer
+}
+
 function seed() {
+  db.customerStages.push(...DEFAULT_CUSTOMER_STAGES.map((stage, order) => ({ ...stage, order, system: true, createdAt: now() })))
+
   const teamSales = { id: uid(), name: 'Sales', description: 'Sotuv bo‘limi', lead: null, status: 'active', membersCount: 2 }
   const teamInstall = { id: uid(), name: 'Installation', description: 'O‘rnatish bo‘limi', lead: null, status: 'active', membersCount: 1 }
   db.teams.push(teamSales, teamInstall)
@@ -58,7 +176,8 @@ function seed() {
     id: uid(),
     name: 'Admin Zenix',
     email: 'admin@zenix.com',
-    password: 'admin123',
+    username: 'admin',
+    password: hashPassword('admin123'),
     phone: '+998901234567',
     role: 'SUPER_ADMIN',
     permissions: [],
@@ -70,17 +189,19 @@ function seed() {
     id: uid(),
     name: 'Sardor Aliyev',
     email: 'sardor@zenix.com',
-    password: 'sardor123',
+    username: 'sardor.sales',
+    password: hashPassword('sardor123'),
     phone: '+998901112233',
     role: 'SALES',
     permissions: [
       'customers.view', 'customers.create', 'customers.edit',
+      'customer-groups.view', 'customer-groups.create', 'customer-groups.edit',
       'businesses.view', 'businesses.create', 'businesses.edit',
       'leads.view', 'leads.create', 'leads.edit',
       'deals.view', 'deals.create', 'deals.edit',
       'quotations.view', 'quotations.create', 'quotations.edit',
       'payments.view', 'payments.create',
-      'tasks.view', 'tasks.create', 'tasks.edit',
+      'tasks.view',
       'activities.view', 'activities.create',
       'installations.view',
       'attachments.create', 'comments.create',
@@ -93,7 +214,8 @@ function seed() {
     id: uid(),
     name: 'Javohir Karimov',
     email: 'javohir@zenix.com',
-    password: 'javohir123',
+    username: 'javohir.install',
+    password: hashPassword('javohir123'),
     phone: '+998903334455',
     role: 'INSTALLER',
     permissions: ['installations.view', 'installations.edit', 'tasks.view', 'activities.view', 'activities.create', 'comments.create'],
@@ -111,7 +233,10 @@ function seed() {
     phone: '+998901234500',
     email: 'ali@example.com',
     assignedEmployee: { id: sales.id, name: sales.name },
+    amount: 4500000,
     status: 'active',
+    stage: 'DEPOSIT_RECEIVED',
+    programs: [{ id: uid(), name: 'Bito POS', status: 'ACTIVE', createdAt: now() }],
     createdAt: now(),
   }
   const customer2 = {
@@ -120,10 +245,19 @@ function seed() {
     phone: '+998907654321',
     email: 'malika@example.com',
     assignedEmployee: { id: sales.id, name: sales.name },
+    amount: 0,
     status: 'active',
+    stage: 'NEW',
+    programs: [{ id: uid(), name: 'Bito Kassa', status: 'NEW', createdAt: now() }],
     createdAt: now(),
   }
   db.customers.push(customer1, customer2)
+  db.customerGroups.push(
+    { id: uid(), name: 'VIP mijozlar', createdAt: now(), status: 'active' },
+    { id: uid(), name: 'Bito mijozlari', createdAt: now(), status: 'active' }
+  )
+  customer1.groupIds = [db.customerGroups[0].id, db.customerGroups[1].id]
+  customer2.groupIds = [db.customerGroups[1].id]
 
   const business1 = {
     id: uid(),
@@ -332,7 +466,7 @@ function requireAuth(req, res, next) {
   next()
 }
 
-function paginate(list, query, { searchFields = [], relationFields = [] } = {}) {
+function paginate(list, query, { searchFields = [], relationFields = [], filterFn, extraSearchText, enrichFn } = {}) {
   let result = [...list]
 
   relationFields.forEach((field) => {
@@ -343,10 +477,17 @@ function paginate(list, query, { searchFields = [], relationFields = [] } = {}) 
   if (query.source) result = result.filter((item) => item.source === query.source)
   if (query.method) result = result.filter((item) => item.method === query.method)
   if (query.type) result = result.filter((item) => item.type === query.type)
+  if (query.stage) result = result.filter((item) => item.stage === query.stage)
+  if (query.priority) result = result.filter((item) => item.priority === query.priority)
+  if (filterFn) result = result.filter((item) => filterFn(item, query))
 
   if (query.search) {
     const term = String(query.search).toLowerCase()
-    result = result.filter((item) => searchFields.some((field) => String(item[field] || '').toLowerCase().includes(term)))
+    result = result.filter((item) => {
+      const directMatch = searchFields.some((field) => String(item[field] || '').toLowerCase().includes(term))
+      const extraMatch = extraSearchText ? String(extraSearchText(item) || '').toLowerCase().includes(term) : false
+      return directMatch || extraMatch
+    })
   }
 
   if (query.assignedToMe === 'true' && query.__currentUserId) {
@@ -368,7 +509,7 @@ function paginate(list, query, { searchFields = [], relationFields = [] } = {}) 
   const total = result.length
   const page = Number(query.page) || 1
   const pageSize = Number(query.pageSize) || 20
-  const items = result.slice((page - 1) * pageSize, page * pageSize)
+  const items = result.slice((page - 1) * pageSize, page * pageSize).map((item) => (enrichFn ? enrichFn(item) : item))
   return { items, total, page, pageSize }
 }
 
@@ -445,8 +586,10 @@ function findOr404(res, list, id, label) {
 // ---------------------------------------------------------------------------
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {}
-  const user = db.users.find((u) => u.email === email && u.password === password)
+  const login = String(email || '').trim()
+  const user = db.users.find((u) => (u.email === login || u.username === login) && verifyPassword(password, u.password))
   if (!user) return res.status(401).json({ message: 'Email yoki parol noto‘g‘ri' })
+  if (user.status === 'inactive') return res.status(403).json({ message: 'Bu xodim nofaol holatda' })
 
   const sid = uid()
   db.sessions.set(sid, user.id)
@@ -466,8 +609,27 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 })
 
 app.patch('/api/users/me', requireAuth, (req, res) => {
-  Object.assign(req.user, req.body)
-  res.json(publicUser(req.user))
+  try {
+    const { currentPassword, newPassword, confirmPassword, ...profile } = req.body || {}
+    const next = normalizeUserPayload(profile, { existingUser: req.user })
+    Object.assign(req.user, next)
+
+    if (newPassword) {
+      if (!currentPassword || !verifyPassword(currentPassword, req.user.password)) {
+        return res.status(400).json({ message: 'Joriy parol noto‘g‘ri' })
+      }
+      if (String(newPassword).length < 6) {
+        return res.status(400).json({ message: 'Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak' })
+      }
+      if (confirmPassword && newPassword !== confirmPassword) {
+        return res.status(400).json({ message: 'Yangi parol tasdiqlanmadi' })
+      }
+      req.user.password = hashPassword(newPassword)
+    }
+    res.json(publicUser(req.user))
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Profilni yangilab bo‘lmadi' })
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -475,61 +637,84 @@ app.patch('/api/users/me', requireAuth, (req, res) => {
 // ---------------------------------------------------------------------------
 app.use('/api', requireAuth)
 
-app.get('/api/employees', (req, res) => res.json(paginate(db.users, req.query, { searchFields: ['name', 'email'] })))
-app.get('/api/employees/:id', (req, res) => {
+app.get('/api/employees', requirePermission('employees.view'), (req, res) =>
+  res.json(paginate(db.users, req.query, {
+    searchFields: ['name', 'email', 'username'],
+    enrichFn: (user) => ({ ...publicUser(user), performance: employeePerformance(user.id) }),
+  }))
+)
+app.get('/api/employees/:id', requirePermission('employees.view'), (req, res) => {
   const user = findOr404(res, db.users, req.params.id, 'Xodim')
-  if (user) res.json(publicUser(user))
+  if (user) res.json({ ...publicUser(user), performance: employeePerformance(user.id) })
 })
-app.post('/api/employees', (req, res) => {
-  const employee = { id: uid(), status: 'active', createdAt: now(), ...req.body, password: req.body.password || 'changeme123' }
-  db.users.push(employee)
-  res.status(201).json(publicUser(employee))
+app.post('/api/employees', requirePermission('employees.create'), (req, res) => {
+  try {
+    const employee = {
+      id: uid(),
+      status: 'active',
+      createdAt: now(),
+      permissions: [],
+      ...normalizeUserPayload(req.body, { allowPassword: true }),
+    }
+    if (!employee.password) employee.password = hashPassword('changeme123')
+    if (db.users.some((u) => u.email === employee.email || (employee.username && u.username === employee.username))) {
+      return res.status(400).json({ message: 'Bunday login yoki email mavjud' })
+    }
+    db.users.push(employee)
+    res.status(201).json(publicUser(employee))
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Xodim yaratib bo‘lmadi' })
+  }
 })
-app.patch('/api/employees/:id', (req, res) => {
+app.patch('/api/employees/:id', requirePermission('employees.edit'), (req, res) => {
   const user = findOr404(res, db.users, req.params.id, 'Xodim')
   if (!user) return
-  Object.assign(user, req.body)
-  res.json(publicUser(user))
+  try {
+    Object.assign(user, normalizeUserPayload(req.body, { existingUser: user, allowPassword: true }))
+    res.json(publicUser(user))
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Xodimni yangilab bo‘lmadi' })
+  }
 })
-app.post('/api/employees/:id/activate', (req, res) => {
+app.post('/api/employees/:id/activate', requirePermission('employees.edit'), (req, res) => {
   const user = findOr404(res, db.users, req.params.id, 'Xodim')
   if (!user) return
   user.status = 'active'
   res.json(publicUser(user))
 })
-app.post('/api/employees/:id/deactivate', (req, res) => {
+app.post('/api/employees/:id/deactivate', requirePermission('employees.edit'), (req, res) => {
   const user = findOr404(res, db.users, req.params.id, 'Xodim')
   if (!user) return
   user.status = 'inactive'
   res.json(publicUser(user))
 })
-app.get('/api/employees/:id/tasks', (req, res) => res.json(paginate(db.tasks.filter((t) => t.assignedEmployeeId === req.params.id), {})))
-app.get('/api/employees/:id/leads', (req, res) => res.json(paginate(db.leads.filter((l) => l.assignedEmployee?.id === req.params.id), {})))
-app.get('/api/employees/:id/deals', (req, res) => res.json(paginate(db.deals.filter((d) => d.salesEmployee?.id === req.params.id), {})))
-app.get('/api/employees/:id/installations', (req, res) =>
+app.get('/api/employees/:id/tasks', requirePermission('employees.view'), (req, res) => res.json(paginate(db.tasks.filter((t) => t.assignedEmployeeId === req.params.id), {})))
+app.get('/api/employees/:id/leads', requirePermission('employees.view'), (req, res) => res.json(paginate(db.leads.filter((l) => l.assignedEmployee?.id === req.params.id), {})))
+app.get('/api/employees/:id/deals', requirePermission('employees.view'), (req, res) => res.json(paginate(db.deals.filter((d) => d.salesEmployee?.id === req.params.id), {})))
+app.get('/api/employees/:id/installations', requirePermission('employees.view'), (req, res) =>
   res.json(paginate(db.installations.filter((i) => i.assignedEmployee?.id === req.params.id), {}))
 )
 
 // ---------------------------------------------------------------------------
 // Teams
 // ---------------------------------------------------------------------------
-app.get('/api/teams', (req, res) => res.json(paginate(db.teams, req.query, { searchFields: ['name'] })))
-app.get('/api/teams/:id', (req, res) => {
+app.get('/api/teams', requirePermission('employees.view'), (req, res) => res.json(paginate(db.teams, req.query, { searchFields: ['name'] })))
+app.get('/api/teams/:id', requirePermission('employees.view'), (req, res) => {
   const team = findOr404(res, db.teams, req.params.id, 'Jamoa')
   if (team) res.json(team)
 })
-app.post('/api/teams', (req, res) => {
+app.post('/api/teams', requirePermission('employees.edit'), (req, res) => {
   const team = { id: uid(), status: 'active', membersCount: 0, members: [], createdAt: now(), ...req.body }
   db.teams.push(team)
   res.status(201).json(team)
 })
-app.patch('/api/teams/:id', (req, res) => {
+app.patch('/api/teams/:id', requirePermission('employees.edit'), (req, res) => {
   const team = findOr404(res, db.teams, req.params.id, 'Jamoa')
   if (!team) return
   Object.assign(team, req.body)
   res.json(team)
 })
-app.delete('/api/teams/:id', (req, res) => {
+app.delete('/api/teams/:id', requirePermission('employees.edit'), (req, res) => {
   const index = db.teams.findIndex((t) => t.id === req.params.id)
   if (index === -1) return res.status(404).json({ message: 'Jamoa topilmadi' })
   db.teams.splice(index, 1)
@@ -544,9 +729,9 @@ const seededRoles = [
   { id: uid(), name: 'SALES', permissions: db.users.find((u) => u.role === 'SALES')?.permissions ?? [] },
   { id: uid(), name: 'INSTALLER', permissions: db.users.find((u) => u.role === 'INSTALLER')?.permissions ?? [] },
 ]
-app.get('/api/roles', (req, res) => res.json(paginate(seededRoles, req.query, { searchFields: ['name'] })))
-app.get('/api/roles/permissions-schema', (req, res) => res.json([]))
-app.get('/api/roles/:id', (req, res) => {
+app.get('/api/roles', requirePermission('settings.view'), (req, res) => res.json(paginate(seededRoles, req.query, { searchFields: ['name'] })))
+app.get('/api/roles/permissions-schema', requirePermission('settings.view'), (req, res) => res.json([]))
+app.get('/api/roles/:id', requirePermission('settings.view'), (req, res) => {
   const role = findOr404(res, seededRoles, req.params.id, 'Rol')
   if (role) res.json(role)
 })
@@ -557,11 +742,28 @@ app.get('/api/roles/:id', (req, res) => {
 function registerResource(
   path,
   collection,
-  { searchFields = ['name'], relationFields = [], skipCreate = false, defaultStatus = 'active' } = {}
+  { searchFields = ['name'], relationFields = [], skipCreate = false, defaultStatus = 'active', filterFn, extraSearchText, enrichFn } = {}
 ) {
-  app.get(`/api/${path}`, (req, res) => res.json(paginate(collection, { ...req.query, __currentUserId: req.user.id }, { searchFields, relationFields })))
+  const resource = path
+  app.get(`/api/${path}`, (req, res) => {
+    if (!hasPermission(req.user, `${resource}.view`)) return res.status(403).json({ message: 'Bu bo‘lim uchun ruxsat yo‘q' })
+    const query = { ...req.query, __currentUserId: req.user.id }
+    if (path === 'tasks' && !hasPermission(req.user, 'tasks.viewAll')) query.assignedToMe = 'true'
+    let list = collection
+    if (path === 'customers' && !isAdmin(req.user)) {
+      list = collection.filter((item) => resolveAssignedEmployeeId(item) === req.user.id)
+    }
+    res.json(paginate(list, query, { searchFields, relationFields, filterFn, extraSearchText, enrichFn }))
+  })
   app.get(`/api/${path}/:id`, (req, res) => {
+    if (!hasPermission(req.user, `${resource}.view`)) return res.status(403).json({ message: 'Bu bo‘lim uchun ruxsat yo‘q' })
     const item = findOr404(res, collection, req.params.id, path)
+    if (item && path === 'customers' && !isAdmin(req.user) && resolveAssignedEmployeeId(item) !== req.user.id) {
+      return res.status(403).json({ message: 'Bu mijoz uchun ruxsat yo‘q' })
+    }
+    if (item && path === 'tasks' && !hasPermission(req.user, 'tasks.viewAll') && resolveAssignedEmployeeId(item) !== req.user.id) {
+      return res.status(403).json({ message: 'Bu vazifa uchun ruxsat yo‘q' })
+    }
     if (item) res.json(item)
   })
   // skipCreate: true means a resource registers its own POST handler
@@ -572,7 +774,10 @@ function registerResource(
   // silently shadow the specialized one.
   if (!skipCreate) {
     app.post(`/api/${path}`, (req, res) => {
-      const item = enrichReferences({ id: uid(), status: req.body.status || defaultStatus, createdAt: now(), ...req.body })
+      if (!hasPermission(req.user, `${resource}.create`)) return res.status(403).json({ message: 'Qo‘shish uchun ruxsat yo‘q' })
+      const customerDefaults = path === 'customers' ? { stage: defaultCustomerStageId(), amount: 0 } : {}
+      const item = enrichReferences({ id: uid(), status: req.body.status || defaultStatus, ...customerDefaults, createdAt: now(), ...req.body })
+      if (path === 'customers') normalizeCustomerRecord(item)
       collection.push(item)
       res.status(201).json(item)
     })
@@ -580,18 +785,267 @@ function registerResource(
   app.patch(`/api/${path}/:id`, (req, res) => {
     const item = findOr404(res, collection, req.params.id, path)
     if (!item) return
+    if (path === 'tasks' && !hasPermission(req.user, 'tasks.edit')) {
+      const allowedOwnStatus = resolveAssignedEmployeeId(item) === req.user.id && Object.keys(req.body || {}).every((key) => key === 'status')
+      if (!allowedOwnStatus) return res.status(403).json({ message: 'Vazifani tahrirlash uchun ruxsat yo‘q' })
+    } else if (!hasPermission(req.user, `${resource}.edit`)) {
+      return res.status(403).json({ message: 'Tahrirlash uchun ruxsat yo‘q' })
+    }
+    if (path === 'customers' && !isAdmin(req.user) && resolveAssignedEmployeeId(item) !== req.user.id) {
+      return res.status(403).json({ message: 'Bu mijoz uchun ruxsat yo‘q' })
+    }
     Object.assign(item, req.body)
     enrichReferences(item)
+    if (path === 'customers') normalizeCustomerRecord(item)
     res.json(item)
   })
 }
 
-registerResource('customers', db.customers, { searchFields: ['name', 'phone', 'email'] })
+function customerBusinesses(customerId) {
+  return db.businesses.filter((b) => b.customer?.id === customerId)
+}
+
+function customerInstallations(customerId) {
+  return db.installations.filter((installation) => installation.customer?.id === customerId)
+}
+
+function customerDeals(customerId) {
+  return db.deals.filter((d) => d.customer?.id === customerId)
+}
+
+function customerDealAmount(customerId) {
+  return customerDeals(customerId).reduce((sum, deal) => sum + Number(deal.value || 0), 0)
+}
+
+function employeePerformance(employeeId) {
+  const customers = db.customers.filter((c) => c.assignedEmployee?.id === employeeId)
+  const leads = db.leads.filter((l) => l.assignedEmployee?.id === employeeId)
+  const deals = db.deals.filter((d) => d.salesEmployee?.id === employeeId)
+  const wonDeals = deals.filter((d) => d.stage === 'WON')
+  const revenue = customers.reduce((sum, customer) => sum + customerDealAmount(customer.id), 0)
+  const tasksCompleted = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'COMPLETED').length
+  const tasksInProgress = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'IN_PROGRESS').length
+  const installationsCompleted = db.installations.filter((i) => i.assignedEmployee?.id === employeeId && i.status === 'COMPLETED').length
+  const activeTasks = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && !['COMPLETED', 'CANCELLED'].includes(t.status)).length
+  const stageCounts = DEFAULT_CUSTOMER_STAGES.reduce((acc, stage) => ({ ...acc, [stage.id]: 0 }), {})
+  customers.forEach((customer) => {
+    const stage = normalizeCustomerStage(customer.stage)
+    stageCounts[stage] = (stageCounts[stage] || 0) + 1
+  })
+
+  return {
+    customers: customers.length,
+    stageCounts,
+    stageStats: DEFAULT_CUSTOMER_STAGES.map((stage) => ({ id: stage.id, label: stage.label, count: stageCounts[stage.id] || 0 })),
+    leads: leads.length,
+    deals: deals.length,
+    wonDeals: wonDeals.length,
+    revenue,
+    tasksCompleted,
+    tasksInProgress,
+    activeTasks,
+    installationsCompleted,
+  }
+}
+
+function customerStageLabel(stageId) {
+  return db.customerStages.find((stage) => stage.id === stageId)?.label || stageId || ''
+}
+
+function slugStageName(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘'`]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase()
+}
+
+function makeCustomerStageId(name) {
+  const base = slugStageName(name) || 'BOSQICH'
+  let id = `CUSTOM_${base}`
+  let suffix = 2
+  while (db.customerStages.some((stage) => stage.id === id)) {
+    id = `CUSTOM_${base}_${suffix}`
+    suffix += 1
+  }
+  return id
+}
+
+function orderedCustomerStages() {
+  return [...db.customerStages].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+}
+
+function reindexCustomerStages(stages = orderedCustomerStages()) {
+  stages.forEach((stage, index) => {
+    stage.order = index
+  })
+  db.customerStages = stages
+}
+
+app.get('/api/meta/customer-stages', (req, res) => {
+  if (!hasPermission(req.user, 'customers.view')) return res.status(403).json({ message: 'CRM bosqichlarini ko‘rish uchun ruxsat yo‘q' })
+  const items = orderedCustomerStages()
+  res.json({ items, total: items.length })
+})
+app.post('/api/meta/customer-stages', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Bosqich yaratish uchun ruxsat yo‘q' })
+  const label = String(req.body?.name || req.body?.label || '').trim()
+  if (!label) return res.status(400).json({ message: 'Bosqich nomi kiritilishi shart' })
+  if (db.customerStages.some((stage) => stage.label.toLowerCase() === label.toLowerCase())) {
+    return res.status(400).json({ message: 'Bunday bosqich mavjud' })
+  }
+  const ordered = orderedCustomerStages()
+  const afterIndex = req.body?.afterStageId ? ordered.findIndex((item) => item.id === req.body.afterStageId) : ordered.length - 1
+  const insertIndex = afterIndex >= 0 ? afterIndex + 1 : ordered.length
+  const stage = { id: makeCustomerStageId(label), label, order: insertIndex, system: false, createdAt: now() }
+  ordered.splice(insertIndex, 0, stage)
+  reindexCustomerStages(ordered)
+  res.status(201).json(stage)
+})
+app.patch('/api/meta/customer-stages/:id', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Bosqichni tahrirlash uchun ruxsat yoq' })
+  const stage = findOr404(res, db.customerStages, req.params.id, 'Bosqich')
+  if (!stage) return
+  const label = String(req.body?.name || req.body?.label || stage.label).trim()
+  if (!label) return res.status(400).json({ message: 'Bosqich nomi kiritilishi shart' })
+  if (db.customerStages.some((item) => item.id !== stage.id && item.label.toLowerCase() === label.toLowerCase())) {
+    return res.status(400).json({ message: 'Bunday bosqich mavjud' })
+  }
+  stage.label = label
+
+  const direction = req.body?.direction
+  if (direction === 'left' || direction === 'right') {
+    const orderedStages = orderedCustomerStages()
+    const index = orderedStages.findIndex((item) => item.id === stage.id)
+    const targetIndex = direction === 'left' ? index - 1 : index + 1
+    if (index >= 0 && targetIndex >= 0 && targetIndex < orderedStages.length) {
+      orderedStages.splice(index, 1)
+      orderedStages.splice(targetIndex, 0, stage)
+      reindexCustomerStages(orderedStages)
+    }
+  } else if (req.body?.order !== undefined) {
+    const orderedStages = orderedCustomerStages().filter((item) => item.id !== stage.id)
+    const targetIndex = Math.max(0, Math.min(Number(req.body.order) || 0, orderedStages.length))
+    orderedStages.splice(targetIndex, 0, stage)
+    reindexCustomerStages(orderedStages)
+  }
+
+  res.json(stage)
+})
+app.delete('/api/meta/customer-stages/:id', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Bosqichni ochirish uchun ruxsat yoq' })
+  const index = db.customerStages.findIndex((stage) => stage.id === req.params.id)
+  if (index === -1) return res.status(404).json({ message: 'Bosqich topilmadi' })
+  if (db.customerStages.length <= 1) return res.status(400).json({ message: 'Kamida bitta bosqich qolishi kerak' })
+  const affected = db.customers.filter((customer) => customer.stage === req.params.id)
+  if (affected.length > 0) {
+    const replacementStageId = req.body?.replacementStageId
+    if (!replacementStageId || replacementStageId === req.params.id || !db.customerStages.some((stage) => stage.id === replacementStageId)) {
+      return res.status(400).json({ message: 'Mijozlarni kochirish uchun boshqa bosqich tanlang', count: affected.length })
+    }
+    affected.forEach((customer) => {
+      customer.stage = replacementStageId
+    })
+  }
+  db.customerStages.splice(index, 1)
+  reindexCustomerStages()
+  res.status(204).end()
+})
+app.get('/api/meta/customer-options', (req, res) => {
+  if (!hasPermission(req.user, 'customers.view')) return res.status(403).json({ message: 'Mijoz filterlarini ko‘rish uchun ruxsat yo‘q' })
+  const stageCounts = {}
+  const customers = isAdmin(req.user) ? db.customers : db.customers.filter((customer) => resolveAssignedEmployeeId(customer) === req.user.id)
+  customers.forEach((customer) => {
+    const stage = normalizeCustomerStage(customer.stage)
+    stageCounts[stage] = (stageCounts[stage] || 0) + 1
+  })
+  res.json({
+    cities: [...new Set(db.businesses.map((business) => business.city).filter(Boolean))].sort(),
+    programs: [...new Set(db.customers.flatMap((customer) => (customer.programs || []).map((program) => program.name)))].sort(),
+    stageCounts,
+  })
+})
+
+registerResource('customers', db.customers, {
+  searchFields: ['name', 'phone', 'email'],
+  relationFields: ['assignedEmployeeId'],
+  filterFn: (customer, query) => {
+    if (query.city && !customerBusinesses(customer.id).some((business) => business.city === query.city)) return false
+    if (query.program && !(customer.programs || []).some((program) => program.name === query.program)) return false
+    if (query.groupId && !(customer.groupIds || []).includes(query.groupId)) return false
+    if (query.installationStatus && !customerInstallations(customer.id).some((installation) => installation.status === query.installationStatus)) return false
+    if (query.createdFrom && customer.createdAt < query.createdFrom) return false
+    if (query.createdTo && customer.createdAt > `${query.createdTo}T23:59:59.999Z`) return false
+    return true
+  },
+  extraSearchText: (customer) => [
+    ...customerBusinesses(customer.id).map((business) => business.name),
+    ...customerBusinesses(customer.id).map((business) => business.city),
+    ...(customer.programs || []).map((program) => program.name),
+    customerStageLabel(customer.stage),
+  ].join(' '),
+  enrichFn: (customer) => ({ ...customer, dealAmount: customerDealAmount(customer.id) }),
+})
+app.post('/api/customers/bulk-move', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Mijozlarni kochirish uchun ruxsat yoq' })
+  const ids = Array.isArray(req.body?.customerIds) ? req.body.customerIds : []
+  const stage = req.body?.stage ? normalizeCustomerStage(req.body.stage) : null
+  const targetGroupId = req.body?.targetGroupId || ''
+  const fromGroupId = req.body?.fromGroupId || ''
+  if (targetGroupId && !db.customerGroups.some((group) => group.id === targetGroupId)) {
+    return res.status(400).json({ message: 'Guruh topilmadi' })
+  }
+  const updated = []
+  ids.forEach((id) => {
+    const customer = db.customers.find((item) => item.id === id)
+    if (!customer) return
+    if (!isAdmin(req.user) && resolveAssignedEmployeeId(customer) !== req.user.id) return
+    if (stage) customer.stage = stage
+    const groupIds = new Set(customer.groupIds || [])
+    if (fromGroupId && fromGroupId !== targetGroupId) groupIds.delete(fromGroupId)
+    if (targetGroupId) groupIds.add(targetGroupId)
+    customer.groupIds = [...groupIds]
+    updated.push(customer)
+  })
+  res.json({ items: updated, total: updated.length })
+})
+app.patch('/api/customers/:id/stage', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Bosqichni o‘zgartirish uchun ruxsat yo‘q' })
+  const customer = findOr404(res, db.customers, req.params.id, 'Mijoz')
+  if (!customer) return
+  if (!isAdmin(req.user) && resolveAssignedEmployeeId(customer) !== req.user.id) {
+    return res.status(403).json({ message: 'Bu mijoz uchun ruxsat yo‘q' })
+  }
+  customer.stage = normalizeCustomerStage(req.body.stage)
+  res.json(customer)
+})
+app.patch('/api/customers/:id/groups', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Guruhni yangilash uchun ruxsat yoq' })
+  const customer = findOr404(res, db.customers, req.params.id, 'Mijoz')
+  if (!customer) return
+  customer.groupIds = Array.isArray(req.body.groupIds) ? req.body.groupIds.filter((id) => db.customerGroups.some((group) => group.id === id)) : customer.groupIds
+  res.json(customer)
+})
 app.post('/api/customers/:id/deactivate', (req, res) => {
+  if (!hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Mijozni o‘zgartirish uchun ruxsat yo‘q' })
   const customer = findOr404(res, db.customers, req.params.id, 'Mijoz')
   if (!customer) return
   customer.status = customer.status === 'active' ? 'inactive' : 'active'
   res.json(customer)
+})
+
+registerResource('customer-groups', db.customerGroups, { searchFields: ['name'] })
+app.delete('/api/customer-groups/:id', (req, res) => {
+  if (!hasPermission(req.user, 'customer-groups.edit') && !hasPermission(req.user, 'customers.edit')) return res.status(403).json({ message: 'Guruhni ochirish uchun ruxsat yoq' })
+  const index = db.customerGroups.findIndex((group) => group.id === req.params.id)
+  if (index === -1) return res.status(404).json({ message: 'Guruh topilmadi' })
+  db.customerGroups.splice(index, 1)
+  db.customers.forEach((customer) => {
+    if (customer.groupIds?.includes(req.params.id)) customer.groupIds = customer.groupIds.filter((id) => id !== req.params.id)
+  })
+  res.status(204).end()
 })
 
 registerResource('businesses', db.businesses, { searchFields: ['name', 'city'], relationFields: ['customerId'] })
@@ -724,7 +1178,11 @@ registerResource('tasks', db.tasks, {
   skipCreate: true,
 })
 app.post('/api/tasks', (req, res) => {
-  const task = enrichReferences({ id: uid(), status: 'TODO', createdAt: now(), ...req.body })
+  if (!hasPermission(req.user, 'tasks.create')) return res.status(403).json({ message: 'Vazifa yaratish uchun ruxsat yo‘q' })
+  if (req.body?.assignedEmployeeId && req.body.assignedEmployeeId !== req.user.id && !hasPermission(req.user, 'tasks.assign')) {
+    return res.status(403).json({ message: 'Boshqa xodimga vazifa biriktirish uchun ruxsat yo‘q' })
+  }
+  const task = enrichReferences({ id: uid(), status: 'TODO', createdAt: now(), assignedEmployeeId: req.user.id, ...req.body })
   db.tasks.push(task)
   res.status(201).json(task)
 })
@@ -929,22 +1387,34 @@ app.get('/api/analytics/installations-by-status', (req, res) => {
   res.json(Object.entries(counts).map(([status, count]) => ({ status, count })))
 })
 app.get('/api/analytics/employee-performance/:id', (req, res) => {
+  if (!hasPermission(req.user, 'employees.view')) return res.status(403).json({ message: 'Xodim statistikasini ko‘rish uchun ruxsat yo‘q' })
   const employeeId = req.params.id
+  const customers = db.customers.filter((c) => c.assignedEmployee?.id === employeeId)
   const leads = db.leads.filter((l) => l.assignedEmployee?.id === employeeId)
   const deals = db.deals.filter((d) => d.salesEmployee?.id === employeeId)
   const wonDeals = deals.filter((d) => d.stage === 'WON')
-  const revenue = db.payments
-    .filter((p) => p.status === 'PAID' && deals.some((d) => d.id === p.dealId))
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const revenue = customers.reduce((sum, customer) => sum + customerDealAmount(customer.id), 0)
   const tasksCompleted = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'COMPLETED').length
+  const tasksInProgress = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'IN_PROGRESS').length
   const installationsCompleted = db.installations.filter((i) => i.assignedEmployee?.id === employeeId && i.status === 'COMPLETED').length
+  const activeTasks = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && !['COMPLETED', 'CANCELLED'].includes(t.status)).length
+  const stageCounts = DEFAULT_CUSTOMER_STAGES.reduce((acc, stage) => ({ ...acc, [stage.id]: 0 }), {})
+  customers.forEach((customer) => {
+    const stage = normalizeCustomerStage(customer.stage)
+    stageCounts[stage] = (stageCounts[stage] || 0) + 1
+  })
 
   res.json({
+    customers: customers.length,
+    stageCounts,
+    stageStats: DEFAULT_CUSTOMER_STAGES.map((stage) => ({ id: stage.id, label: stage.label, count: stageCounts[stage.id] || 0 })),
     leads: leads.length,
     deals: deals.length,
     wonDeals: wonDeals.length,
     revenue,
     tasksCompleted,
+    tasksInProgress,
+    activeTasks,
     installationsCompleted,
   })
 })

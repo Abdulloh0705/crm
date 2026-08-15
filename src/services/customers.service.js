@@ -27,8 +27,13 @@ export const customersService = {
 
   // Groups (guruhlar)
   setGroups: (id, groupIds) => httpClient.patch(CUSTOMERS.GROUPS_UPDATE(id), { groupIds }),
+  bulkMove: (payload) => httpClient.post(CUSTOMERS.BULK_MOVE, payload),
 
   // Pipeline stage (Yangi -> Gaplashildi -> ... -> Tugallandi)
+  listStages: () => httpClient.get(CUSTOMERS.STAGES),
+  createStage: (payload) => httpClient.post(CUSTOMERS.STAGES, payload),
+  updateStage: (id, payload) => httpClient.patch(CUSTOMERS.STAGE_DETAIL(id), payload),
+  deleteStage: (id, payload) => httpClient.delete(CUSTOMERS.STAGE_DETAIL(id), { body: payload }),
   setStage: (id, stage) => httpClient.patch(CUSTOMERS.STAGE_UPDATE(id), { stage }),
 
   // Messages (Yozishmalar)

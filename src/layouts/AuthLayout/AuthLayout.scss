@@ -22,22 +22,24 @@
     @include m.flex(center, center);
     width: 44px;
     height: 44px;
-    border-radius: v.$radius-md;
-    background: linear-gradient(135deg, v.$color-primary-600, v.$color-primary-400);
+    border-radius: 16px;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, v.$color-primary-700, v.$color-primary-400 58%, #f0a3cc);
     color: v.$color-white;
     font-weight: v.$font-weight-bold;
     font-size: v.$font-size-lg;
-    box-shadow: 0 8px 18px -6px rgba(88, 71, 232, 0.55);
+    box-shadow: 0 14px 30px -16px rgba(86, 48, 184, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.48);
   }
 
   &__brand-name {
     font-size: v.$font-size-lg;
     font-weight: v.$font-weight-bold;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
   }
 
   &__card {
-    @include m.glass-panel($blur: v.$glass-blur-lg, $bg: v.$glass-bg-strong, $radius: v.$radius-xl);
+    @include m.glass-panel($blur: v.$glass-blur-lg, $bg: rgba(255, 255, 255, 0.62), $radius: v.$radius-xl);
     padding: v.$space-8;
   }
 

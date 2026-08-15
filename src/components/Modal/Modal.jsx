@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { classNames } from '../../utils/classNames'
 import './Modal.scss'
 
-export function Modal({ open, title, onClose, footer, danger, children }) {
+export function Modal({ open, title, onClose, footer, danger, className, children }) {
   useEffect(() => {
     if (!open) return undefined
     const handleKeyDown = (event) => {
@@ -17,7 +17,7 @@ export function Modal({ open, title, onClose, footer, danger, children }) {
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
-      <div className={classNames('modal', danger && 'modal--danger')} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={classNames('modal', danger && 'modal--danger', className)} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal__header">
           <h3 className="modal__title">{title}</h3>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Yopish">

@@ -27,7 +27,7 @@ export function LoginPage() {
     event.preventDefault()
 
     const errors = validate(values, {
-      email: [rules.required('Elektron pochta kiritilishi shart'), rules.email()],
+    email: [rules.required('Login yoki elektron pochta kiritilishi shart')],
       password: [rules.required('Parol kiritilishi shart')],
     })
     setFieldErrors(errors)
@@ -44,7 +44,7 @@ export function LoginPage() {
   return (
     <>
       <h1 className="auth-layout__title">Xush kelibsiz</h1>
-      <p className="auth-layout__subtitle">BOLD YECHIM tizimiga kirish uchun ma'lumotlaringizni kiriting</p>
+      <p className="auth-layout__subtitle">YECHIM tizimiga kirish uchun ma'lumotlaringizni kiriting</p>
 
       {loginError && (
         <div style={{ marginBottom: 16 }}>
@@ -53,11 +53,11 @@ export function LoginPage() {
       )}
 
       <form onSubmit={handleSubmit} noValidate>
-        <FormField label="Elektron pochta" required error={fieldErrors.email}>
+        <FormField label="Login yoki elektron pochta" required error={fieldErrors.email}>
           <Input
             type="email"
             autoComplete="username"
-            placeholder="siz@misol.uz"
+            placeholder="login yoki siz@misol.uz"
             value={values.email}
             onChange={handleChange('email')}
             error={!!fieldErrors.email}

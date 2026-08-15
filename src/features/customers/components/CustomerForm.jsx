@@ -6,7 +6,7 @@ import { Button } from '../../../components/Button/Button'
 import { useAsync } from '../../../hooks/useAsync'
 import { customerFieldDefsService } from '../../../services/customers.service'
 import { validate, rules } from '../../../utils/validators'
-import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS, CUSTOMER_STAGES, CUSTOMER_STAGE_LABELS } from '../customers.constants'
 import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '../../leads/leads.constants'
 import { ChevronDownIcon } from '../../../components/icons/Icons'
 import { classNames } from '../../../utils/classNames'
@@ -21,6 +21,8 @@ const DEFAULT_VALUES = {
   phone2: '',
   telegram: '',
   email: '',
+  programName: '',
+  amount: '',
   address: DEFAULT_ADDRESS,
   businessName: '',
   businessType: '',
@@ -33,6 +35,7 @@ const DEFAULT_VALUES = {
   source: '',
   assignedEmployeeId: '',
   status: 'active',
+  stage: 'NEW',
   customFields: {},
 }
 
@@ -86,12 +89,28 @@ function CustomFieldInput({ def, value, onChange }) {
 // Employees/customFieldDefs are Drawer-scoped: this form is only ever
 // rendered inside the "+ Mijoz qo'shish" drawer, so it's fine to fetch
 // custom field definitions itself rather than threading them through props.
-export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
+export function CustomerForm({
+  initialValues,
+  employees = [],
+  stages = CUSTOMER_STAGES.map((stage) => ({ id: stage, label: CUSTOMER_STAGE_LABELS[stage] })),
+  submitLabel = 'Saqlash',
+  loading,
+  onSubmit,
+  onCancel,
+}) {
   const { data: fieldDefsData } = useAsync(() => customerFieldDefsService.list({ pageSize: 100 }), [])
   const fieldDefs = fieldDefsData?.items ?? []
 
   const seed = initialValues
-    ? { ...DEFAULT_VALUES, ...splitName(initialValues.name), ...initialValues, address: { ...DEFAULT_ADDRESS, ...initialValues.address }, customFields: { ...initialValues.customFields } }
+    ? {
+        ...DEFAULT_VALUES,
+        ...splitName(initialValues.name),
+        ...initialValues,
+        programName: initialValues.programs?.[0]?.name || '',
+        amount: initialValues.amount ?? '',
+        address: { ...DEFAULT_ADDRESS, ...initialValues.address },
+        customFields: { ...initialValues.customFields },
+      }
     : DEFAULT_VALUES
   const [values, setValues] = useState(seed)
   const [errors, setErrors] = useState({})
@@ -111,10 +130,23 @@ export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saq
     if (Object.keys(nextErrors).length > 0) return
 
     const {
-      firstName, lastName, businessName, businessType, businessPhone, businessAddress,
+      firstName, lastName, businessName, businessType, businessPhone, businessAddress, programName,
       ...rest
     } = values
-    const customerPayload = { ...rest, name: `${firstName} ${lastName}`.trim() }
+    const amount = rest.amount === '' || rest.amount == null ? 0 : Number(rest.amount)
+    const existingPrograms = Array.isArray(values.programs) ? values.programs : []
+    const primaryProgramName = programName.trim()
+    const programs = primaryProgramName
+      ? [
+          {
+            ...(existingPrograms[0] || {}),
+            name: primaryProgramName,
+            status: existingPrograms[0]?.status || 'NEW',
+          },
+          ...existingPrograms.slice(1),
+        ]
+      : existingPrograms
+    const customerPayload = { ...rest, amount: Number.isFinite(amount) ? amount : 0, programs, name: `${firstName} ${lastName}`.trim() }
     const businessPayload = businessName.trim()
       ? { name: businessName, businessType, phone: businessPhone, address: businessAddress, city: values.address.city }
       : null
@@ -133,6 +165,34 @@ export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saq
         </FormField>
         <FormField label="Telefon" required error={errors.phone}>
           <Input value={values.phone} onChange={set('phone')} error={!!errors.phone} disabled={loading} />
+        </FormField>
+        <FormField label="Dastur/xizmat">
+          <Input value={values.programName} onChange={set('programName')} disabled={loading} placeholder="Masalan: Bito POS" />
+        </FormField>
+        <FormField label="Savdo summasi">
+          <Input type="number" min="0" step="1000" value={values.amount} onChange={set('amount')} disabled={loading} placeholder="5000000" />
+        </FormField>
+        <FormField label="Mas'ul xodim">
+          <Select value={values.assignedEmployeeId} onChange={set('assignedEmployeeId')} disabled={loading}>
+            <option value="">Tanlanmagan</option>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label="Bosqich">
+          <Select value={values.stage} onChange={set('stage')} disabled={loading}>
+            {stages.map((stage) => (
+              <option key={stage.id} value={stage.id}>
+                {stage.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label="Izoh">
+          <Input value={values.notes} onChange={set('notes')} disabled={loading} />
         </FormField>
         <FormField label="Qo‘shimcha telefon">
           <Input value={values.phone2} onChange={set('phone2')} disabled={loading} />
@@ -217,16 +277,6 @@ export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saq
               ))}
             </Select>
           </FormField>
-          <FormField label="Mas'ul xodim">
-            <Select value={values.assignedEmployeeId} onChange={set('assignedEmployeeId')} disabled={loading}>
-              <option value="">Tanlanmagan</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
           <FormField label="Holat">
             <Select value={values.status} onChange={set('status')} disabled={loading}>
               {CUSTOMER_STATUSES.map((status) => (
@@ -242,9 +292,6 @@ export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saq
             </FormField>
           ))}
         </div>
-        <FormField label="Izoh">
-          <Input value={values.notes} onChange={set('notes')} disabled={loading} />
-        </FormField>
       </CollapsibleSection>
 
       <div className="card__footer" style={{ paddingLeft: 0, paddingRight: 0 }}>

@@ -7,6 +7,7 @@ import { employeesService } from '../../../services/employees.service'
 import { dealsService } from '../../../services/deals.service'
 import { paymentsService } from '../../../services/payments.service'
 import { CustomerForm } from './CustomerForm'
+import { formatCustomerAmount, getCustomerAmount } from '../customerAmount'
 import { ProgramsPanel } from './ProgramsPanel'
 import { InstallationsPanel } from './InstallationsPanel'
 import { CustomerGroupsField } from './CustomerGroupsField'
@@ -60,7 +61,7 @@ const BASE_SIDE_TABS = [
 // visible column (no click required to reach it) — everything else
 // (programs, deals, payments, tasks...) lives in a compact tab strip in the
 // side column, so working a customer never leaves this one panel.
-export function CustomerWorkspace({ customerId: id }) {
+export function CustomerWorkspace({ customerId: id, onChanged }) {
   const navigate = useNavigate()
   const toast = useToast()
   const confirm = useConfirm()
@@ -118,6 +119,7 @@ export function CustomerWorkspace({ customerId: id }) {
       setIsEditing(false)
       refetch()
       bump()
+      onChanged?.()
     } catch (err) {
       toast.error(err.message || 'Yangilashda xatolik yuz berdi')
     }
@@ -158,6 +160,7 @@ export function CustomerWorkspace({ customerId: id }) {
       await stageAction.run(stage)
       toast.success(`Status: ${CUSTOMER_STAGE_LABELS[stage]}`)
       refetch()
+      onChanged?.()
     } catch (err) {
       toast.error(err.message || 'Statusni yangilashda xatolik yuz berdi')
     }
@@ -196,6 +199,9 @@ export function CustomerWorkspace({ customerId: id }) {
     )
   }
 
+  const customerAmount = getCustomerAmount(customer)
+  const primaryProgram = customer.programs?.[0]?.name || '-'
+
   const header = (
     <div className="customer-workspace__header">
       <div className="customer-workspace__identity">
@@ -222,6 +228,20 @@ export function CustomerWorkspace({ customerId: id }) {
                 </DropdownItem>
               ))}
             </Dropdown>
+          </div>
+          <div className="customer-workspace__facts">
+            <span>
+              Stage: <strong>{CUSTOMER_STAGE_LABELS[customer.stage] || customer.stage || '-'}</strong>
+            </span>
+            <span>
+              Savdo summasi: <strong>{customerAmount > 0 ? formatCustomerAmount(customerAmount) : 'Belgilanmagan'}</strong>
+            </span>
+            <span>
+              Mas'ul: <strong>{customer.assignedEmployee?.name || '-'}</strong>
+            </span>
+            <span>
+              Dastur: <strong>{primaryProgram}</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -313,6 +333,22 @@ export function CustomerWorkspace({ customerId: id }) {
               <div className="stack">
                 <Card title="Umumiy ma'lumot">
                   <div className="detail-grid">
+                    <div className="detail-field">
+                      <div className="detail-field__label">Stage</div>
+                      <div className="detail-field__value">{CUSTOMER_STAGE_LABELS[customer.stage] || customer.stage || '-'}</div>
+                    </div>
+                    <div className="detail-field">
+                      <div className="detail-field__label">Savdo summasi</div>
+                      <div className="detail-field__value">{customerAmount > 0 ? formatCustomerAmount(customerAmount) : 'Belgilanmagan'}</div>
+                    </div>
+                    <div className="detail-field">
+                      <div className="detail-field__label">Dastur</div>
+                      <div className="detail-field__value">{primaryProgram}</div>
+                    </div>
+                    <div className="detail-field">
+                      <div className="detail-field__label">Mas'ul xodim</div>
+                      <div className="detail-field__value">{customer.assignedEmployee?.name || '-'}</div>
+                    </div>
                     <div className="detail-field">
                       <div className="detail-field__label">Qo‘shimcha telefon</div>
                       <div className="detail-field__value">{customer.phone2 || '—'}</div>

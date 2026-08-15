@@ -111,7 +111,7 @@ export function QuotationDetailPage() {
       <div className="quotation-print">
         <div className="quotation-print__header">
           <div>
-            <div className="quotation-print__brand">BOLD YECHIM</div>
+            <div className="quotation-print__brand">YECHIM</div>
             <div className="text-muted text-xs">Taklifnoma #{quotation.number}</div>
           </div>
           <div className="quotation-print__meta">

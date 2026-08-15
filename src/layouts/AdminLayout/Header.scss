@@ -2,10 +2,10 @@
 @use '../../styles/abstracts/mixins' as m;
 
 .header {
-  @include m.glass-panel($blur: v.$glass-blur-md, $bg: v.$glass-bg, $radius: v.$radius-lg);
+  @include m.glass-panel($blur: v.$glass-blur-md, $bg: rgba(255, 255, 255, 0.44), $radius: 28px);
   height: v.$header-height;
   @include m.flex(center, space-between, v.$space-4);
-  padding: 0 v.$space-5;
+  padding: 0 v.$space-4;
   margin: v.$sidebar-margin v.$sidebar-margin 0;
   position: sticky;
   top: v.$sidebar-margin;
@@ -16,19 +16,22 @@
     position: relative;
     z-index: 1;
     min-width: 0;
+    flex: 1 1 auto;
   }
 
   &__menu-btn {
     @include m.flex(center, center);
-    width: 36px;
-    height: 36px;
-    border-radius: v.$radius-md;
+    width: 38px;
+    height: 38px;
+    border-radius: v.$radius-lg;
     color: v.$color-text-secondary;
     flex-shrink: 0;
-    transition: background-color v.$transition-fast;
+    transition: background-color v.$transition-fast, color v.$transition-fast, transform v.$transition-fast;
 
     &:hover {
-      background: rgba(109, 94, 248, 0.08);
+      background: rgba(255, 255, 255, 0.5);
+      color: v.$color-primary-700;
+      transform: translateY(-1px);
     }
 
     @include m.respond-up(v.$breakpoint-lg) {
@@ -39,11 +42,12 @@
   &__title {
     font-size: v.$font-size-md;
     font-weight: v.$font-weight-semibold;
+    color: v.$color-text-primary;
     @include m.truncate;
   }
 
   &__right {
-    @include m.flex(center, flex-end, v.$space-3);
+    @include m.flex(center, flex-end, v.$space-2);
     position: relative;
     z-index: 1;
     flex-shrink: 0;
@@ -53,15 +57,19 @@
     @include m.flex(center, center);
     @include m.focus-ring;
     position: relative;
-    width: 38px;
-    height: 38px;
-    border-radius: v.$radius-md;
+    width: 40px;
+    height: 40px;
+    border-radius: v.$radius-lg;
     color: v.$color-text-secondary;
-    transition: background-color v.$transition-fast, color v.$transition-fast;
+    background: rgba(255, 255, 255, 0.36);
+    border: 1px solid rgba(255, 255, 255, 0.48);
+    transition: background-color v.$transition-fast, color v.$transition-fast, transform v.$transition-fast, box-shadow v.$transition-fast;
 
     &:hover {
-      background: rgba(109, 94, 248, 0.08);
-      color: v.$color-primary-600;
+      background: rgba(255, 255, 255, 0.66);
+      color: v.$color-primary-700;
+      transform: translateY(-1px);
+      box-shadow: v.$shadow-sm;
     }
   }
 
@@ -74,6 +82,6 @@
     border-radius: v.$radius-full;
     background: v.$color-gold-500;
     border: 2px solid v.$color-white;
-    box-shadow: 0 0 0 2px rgba(201, 162, 87, 0.25);
+    box-shadow: 0 0 0 3px rgba(233, 137, 189, 0.18);
   }
 }

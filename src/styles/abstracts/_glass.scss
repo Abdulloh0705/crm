@@ -1,59 +1,50 @@
-// Ambient background + standalone glass/surface utility classes. The
-// mixins that generate these live in _mixins.scss — this file is where they
-// actually get emitted as usable classes, plus the one ambient-background
-// layer used once per layout root (AdminLayout, AuthLayout).
 @use 'variables' as v;
 @use 'mixins' as m;
 
-// Fixed, static (not animated) soft ambient light behind every screen.
-// Static blur on a stationary layer is cheap (composited once by the GPU) —
-// deliberately not animated, per the "no heavy/constant animation" rule.
 .ambient-background {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: v.$color-bg-body;
   pointer-events: none;
+  background:
+    radial-gradient(ellipse at 12% 24%, rgba(162, 196, 255, 0.48) 0%, rgba(162, 196, 255, 0.18) 28%, rgba(162, 196, 255, 0) 58%),
+    radial-gradient(ellipse at 78% 18%, rgba(216, 188, 255, 0.42) 0%, rgba(216, 188, 255, 0.16) 30%, rgba(216, 188, 255, 0) 58%),
+    radial-gradient(ellipse at 88% 76%, rgba(255, 204, 226, 0.46) 0%, rgba(255, 204, 226, 0.14) 32%, rgba(255, 204, 226, 0) 62%),
+    linear-gradient(135deg, #fffefa 0%, #f8f6ff 38%, #eef6ff 72%, #fff7fb 100%);
 
-  &::before,
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background:
+      linear-gradient(115deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0) 34%),
+      linear-gradient(25deg, rgba(236, 244, 255, 0) 20%, rgba(236, 244, 255, 0.48) 54%, rgba(255, 245, 251, 0.5));
+    filter: blur(42px);
+  }
+
   &::after {
     content: '';
     position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-  }
-
-  &::before {
-    top: -12%;
-    left: -8%;
-    width: 46vw;
-    height: 46vw;
-    background: radial-gradient(circle, rgba(109, 94, 248, 0.16) 0%, rgba(109, 94, 248, 0) 70%);
-  }
-
-  &::after {
-    bottom: -18%;
-    right: -10%;
-    width: 52vw;
-    height: 52vw;
-    background: radial-gradient(circle, rgba(201, 162, 87, 0.12) 0%, rgba(201, 162, 87, 0) 70%);
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 70%);
   }
 }
 
 .ambient-background__accent {
   position: absolute;
-  top: 30%;
-  right: 18%;
-  width: 34vw;
-  height: 34vw;
-  border-radius: 50%;
-  filter: blur(90px);
-  background: radial-gradient(circle, rgba(74, 128, 217, 0.1) 0%, rgba(74, 128, 217, 0) 70%);
+  inset: auto 10% 8% 18%;
+  height: 22vh;
+  border-radius: 999px;
+  filter: blur(70px);
+  background: linear-gradient(90deg, rgba(164, 200, 255, 0.22), rgba(255, 205, 232, 0.24));
   pointer-events: none;
 }
 
-// Standalone utility classes (for ad hoc use outside a dedicated component).
 .glass-panel {
   @include m.glass-panel;
 }

@@ -59,7 +59,10 @@ export const CUSTOMERS = {
   PROGRAMS: (id) => `/customers/${id}/programs`,
   PROGRAM_UPDATE: (id, programId) => `/customers/${id}/programs/${programId}`,
   GROUPS_UPDATE: (id) => `/customers/${id}/groups`,
+  BULK_MOVE: '/customers/bulk-move',
   STAGE_UPDATE: (id) => `/customers/${id}/stage`,
+  STAGES: '/meta/customer-stages',
+  STAGE_DETAIL: (id) => `/meta/customer-stages/${id}`,
 }
 
 export const CUSTOMER_GROUPS = {

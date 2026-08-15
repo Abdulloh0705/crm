@@ -5,7 +5,7 @@ import './CustomerStageBar.scss'
 // Mijoz bilan ishlash jarayoni: Yangi -> Gaplashildi -> Buyurtma olindi ->
 // To'lov qilindi -> O'rnatish -> Tugallandi. Bosilgan bosqich ro'yxatni
 // shu bosqichdagi mijozlargacha filtrlaydi.
-export function CustomerStageBar({ activeStage, stageCounts = {}, onSelectStage }) {
+export function CustomerStageBar({ activeStage, stages = CUSTOMER_STAGES, stageLabels = CUSTOMER_STAGE_LABELS, stageCounts = {}, onSelectStage }) {
   const total = Object.values(stageCounts).reduce((sum, n) => sum + n, 0)
 
   return (
@@ -18,14 +18,14 @@ export function CustomerStageBar({ activeStage, stageCounts = {}, onSelectStage 
         Barchasi
         <span className="customer-stage-bar__count">{total}</span>
       </button>
-      {CUSTOMER_STAGES.map((stage) => (
+      {stages.map((stage) => (
         <button
           key={stage}
           type="button"
           className={classNames('customer-stage-bar__pill', activeStage === stage && 'customer-stage-bar__pill--active')}
           onClick={() => onSelectStage(stage)}
         >
-          {CUSTOMER_STAGE_LABELS[stage]}
+          {stageLabels[stage] || stage}
           <span className="customer-stage-bar__count">{stageCounts[stage] || 0}</span>
         </button>
       ))}

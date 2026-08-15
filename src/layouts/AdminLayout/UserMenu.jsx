@@ -3,11 +3,13 @@ import { Dropdown, DropdownItem, DropdownDivider } from '../../components/Dropdo
 import { Avatar } from '../../components/Avatar/Avatar'
 import { ChevronDownIcon, UserIcon, SettingsIcon, LogOutIcon } from '../../components/icons/Icons'
 import { useAuth } from '../../features/auth/useAuth'
+import { usePermissions } from '../../features/roles/usePermissions'
 import { ROLE_LABELS } from '../../features/roles/permissions'
 import './UserMenu.scss'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
+  const { can } = usePermissions()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -31,9 +33,11 @@ export function UserMenu() {
       <DropdownItem onClick={() => navigate('/admin/profile')}>
         <UserIcon width={16} height={16} /> Profil
       </DropdownItem>
-      <DropdownItem onClick={() => navigate('/admin/settings')}>
-        <SettingsIcon width={16} height={16} /> Sozlamalar
-      </DropdownItem>
+      {can('settings.view') && (
+        <DropdownItem onClick={() => navigate('/admin/settings')}>
+          <SettingsIcon width={16} height={16} /> Sozlamalar
+        </DropdownItem>
+      )}
       <DropdownDivider />
       <DropdownItem danger onClick={handleLogout}>
         <LogOutIcon width={16} height={16} /> Chiqish

@@ -20,15 +20,15 @@
     @include m.focus-ring;
     width: 34px;
     height: 34px;
-    border-radius: v.$radius-md;
-    border: 1px solid v.$color-border;
-    background: rgba(255, 255, 255, 0.6);
+    border-radius: v.$radius-lg;
+    border: 1px solid rgba(255, 255, 255, 0.66);
+    background: rgba(255, 255, 255, 0.48);
     font-size: v.$font-size-sm;
     color: v.$color-text-primary;
     transition: background-color v.$transition-fast, border-color v.$transition-fast, color v.$transition-fast;
 
     &:hover:not(:disabled) {
-      background: v.$color-white;
+      background: rgba(255, 255, 255, 0.76);
       border-color: v.$color-primary-300;
     }
     &:disabled {
@@ -36,10 +36,10 @@
       cursor: not-allowed;
     }
     &--active {
-      background: linear-gradient(135deg, v.$color-primary-600, v.$color-primary-500);
+      background: linear-gradient(135deg, v.$color-primary-700, v.$color-primary-500);
       border-color: transparent;
       color: v.$color-white;
-      box-shadow: 0 4px 10px -4px rgba(88, 71, 232, 0.5);
+      box-shadow: 0 12px 24px -16px rgba(86, 48, 184, 0.54);
     }
   }
 }

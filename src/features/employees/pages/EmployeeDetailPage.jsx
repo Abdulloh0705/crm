@@ -41,16 +41,25 @@ function PerformanceSection({ employeeId }) {
   }
 
   const s = data || {}
+  const formatMoney = (value) => `${Number(value || 0).toLocaleString('ru-RU')} so‘m`
 
   return (
     <Card title="Samaradorlik">
       <div className="stat-card-grid">
-        <StatCard label="Murojaatlar" value={s.leads} icon={<InboxIcon width={18} height={18} />} loading={loading} />
-        <StatCard label="Savdolar" value={s.deals} icon={<BuildingIcon width={18} height={18} />} variant="info" loading={loading} />
-        <StatCard label="Yutilgan savdolar" value={s.wonDeals} icon={<DashboardIcon width={18} height={18} />} variant="success" loading={loading} />
-        <StatCard label="Tushum" value={s.revenue} icon={<DashboardIcon width={18} height={18} />} variant="success" loading={loading} />
+        <StatCard label="Biriktirilgan mijozlar" value={s.customers} icon={<InboxIcon width={18} height={18} />} loading={loading} />
+        <StatCard label="Sotuvlar" value={s.deals} icon={<BuildingIcon width={18} height={18} />} variant="info" loading={loading} />
+        <StatCard label="Sotuv summasi" value={formatMoney(s.revenue)} icon={<DashboardIcon width={18} height={18} />} variant="success" loading={loading} />
         <StatCard label="Bajarilgan vazifalar" value={s.tasksCompleted} icon={<UsersIcon width={18} height={18} />} loading={loading} />
+        <StatCard label="Jarayondagi vazifalar" value={s.tasksInProgress} icon={<UsersIcon width={18} height={18} />} variant="info" loading={loading} />
         <StatCard label="Yakunlangan o‘rnatishlar" value={s.installationsCompleted} icon={<TeamIcon width={18} height={18} />} loading={loading} />
+      </div>
+      <div className="employee-stage-stats">
+        {(s.stageStats ?? []).map((stage) => (
+          <div key={stage.id} className="employee-stage-stats__item">
+            <span>{stage.label}</span>
+            <strong>{stage.count}</strong>
+          </div>
+        ))}
       </div>
     </Card>
   )

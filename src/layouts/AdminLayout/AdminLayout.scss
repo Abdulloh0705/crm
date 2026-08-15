@@ -13,6 +13,7 @@
 
   &__content {
     flex: 1;
-    padding: v.$space-6 calc(v.$space-6 + v.$sidebar-margin);
+    padding: v.$space-8 calc(v.$space-6 + v.$sidebar-margin) v.$space-8;
+    overflow-x: hidden;
   }
 }

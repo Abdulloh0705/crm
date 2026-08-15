@@ -65,6 +65,8 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
     event.preventDefault()
     const rulesMap = {
       firstName: [rules.required('Ism kiritilishi shart')],
+      lastName: [rules.required('Familiya kiritilishi shart')],
+      phone: [rules.required('Telefon raqam kiritilishi shart')],
       email: [rules.required('Email kiritilishi shart'), rules.email()],
       role: [rules.required('Rol tanlanishi shart')],
       username: [rules.required('Login kiritilishi shart')],
@@ -99,8 +101,8 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
         <FormField label="Ism" required error={errors.firstName}>
           <Input value={values.firstName} onChange={handleChange('firstName')} error={!!errors.firstName} disabled={loading} />
         </FormField>
-        <FormField label="Familiya">
-          <Input value={values.lastName} onChange={handleChange('lastName')} disabled={loading} />
+        <FormField label="Familiya" required error={errors.lastName}>
+          <Input value={values.lastName} onChange={handleChange('lastName')} error={!!errors.lastName} disabled={loading} />
         </FormField>
       </div>
 
@@ -108,8 +110,8 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
         <FormField label="Elektron pochta" required error={errors.email}>
           <Input type="email" value={values.email} onChange={handleChange('email')} error={!!errors.email} disabled={loading} />
         </FormField>
-        <FormField label="Telefon">
-          <Input value={values.phone} onChange={handleChange('phone')} disabled={loading} />
+        <FormField label="Telefon" required error={errors.phone}>
+          <Input value={values.phone} onChange={handleChange('phone')} error={!!errors.phone} disabled={loading} />
         </FormField>
       </div>
 

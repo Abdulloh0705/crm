@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { classNames } from '../../utils/classNames'
 import { useUI } from '../../store/UIContext'
 import { usePermissions } from '../../features/roles/usePermissions'
-import { BuildingIcon, SettingsIcon, ChevronDownIcon, ChevronLeftIcon, InboxIcon } from '../../components/icons/Icons'
+import { BuildingIcon, SettingsIcon, ChevronDownIcon, ChevronLeftIcon, InboxIcon, UsersIcon } from '../../components/icons/Icons'
 import './Sidebar.scss'
 
 // Bitrix24-style hub: everything customer-related (business, lead, deal,
@@ -12,10 +12,6 @@ import './Sidebar.scss'
 // their own dedicated queue view, not every entity in the data model.
 const CRM_LINKS = [
   { to: '/admin/crm/customers', label: 'Mijozlar', permission: 'customers.view' },
-  { to: '/admin/crm/leads', label: 'Murojaatlar', permission: 'leads.view' },
-  { to: '/admin/crm/deals', label: 'Savdolar', permission: 'deals.view' },
-  { to: '/admin/crm/payments', label: 'To‘lovlar', permission: 'payments.view' },
-  { to: '/admin/crm/installations', label: 'O‘rnatishlar', permission: 'installations.view' },
 ]
 
 export function Sidebar() {
@@ -36,8 +32,8 @@ export function Sidebar() {
         )}
       >
         <div className="sidebar__brand">
-          <span className="sidebar__logo-mark">B</span>
-          <span className="sidebar__logo-text">BOLD YECHIM</span>
+          <span className="sidebar__logo-mark">Y</span>
+          <span className="sidebar__logo-text">YECHIM</span>
         </div>
 
         <nav className="sidebar__nav">
@@ -65,9 +61,22 @@ export function Sidebar() {
             </>
           )}
 
+          {can('employees.view') && (
+            <NavLink
+              to="/admin/employees"
+              className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
+              onClick={closeMobileSidebar}
+            >
+              <span className="sidebar__link-icon">
+                <UsersIcon />
+              </span>
+              <span className="sidebar__link-label">Xodimlar</span>
+            </NavLink>
+          )}
+
           {can('tasks.view') && (
             <NavLink
-              to="/admin/crm/tasks"
+              to="/admin/tasks"
               className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
               onClick={closeMobileSidebar}
             >

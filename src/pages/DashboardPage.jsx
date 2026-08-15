@@ -15,7 +15,7 @@ export function DashboardPage() {
         <div>
           <h2 className="page-header__title">Xush kelibsiz, {user?.name?.split(' ')[0] || 'foydalanuvchi'}</h2>
           <p className="page-header__subtitle">
-            {ROLE_LABELS[user?.role] || user?.role} sifatida BOLD YECHIM tizimiga xush kelibsiz.
+            {ROLE_LABELS[user?.role] || user?.role} sifatida YECHIM tizimiga xush kelibsiz.
           </p>
         </div>
       </div>

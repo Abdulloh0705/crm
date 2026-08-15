@@ -1,6 +1,6 @@
 import './DonutChart.scss'
 
-const COLORS = ['#6d5ef8', '#22a06b', '#c9a257', '#4a80d9', '#d1554f', '#9791b3']
+const COLORS = ['#2f89ae', '#22a06b', '#c9a257', '#73a992', '#d1554f', '#919e97']
 const SIZE = 140
 const STROKE = 18
 const RADIUS = (SIZE - STROKE) / 2

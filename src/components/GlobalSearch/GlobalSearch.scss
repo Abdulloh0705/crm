@@ -4,8 +4,8 @@
 .global-search {
   position: relative;
   flex: 1;
-  max-width: 420px;
-  margin: 0 v.$space-6;
+  max-width: 520px;
+  margin: 0 v.$space-4;
 
   @include m.respond-down(v.$breakpoint-md) {
     display: none;
@@ -23,19 +23,19 @@
 
   &__input {
     width: 100%;
-    height: 38px;
+    height: 42px;
     padding: 0 v.$space-3 0 v.$space-8;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid v.$color-border;
-    border-radius: v.$radius-md;
+    background: rgba(255, 255, 255, 0.44);
+    border: 1px solid rgba(255, 255, 255, 0.64);
+    border-radius: v.$radius-full;
     font-size: v.$font-size-sm;
     transition: border-color v.$transition-fast, background-color v.$transition-fast, box-shadow v.$transition-fast;
 
     &:focus {
       outline: none;
-      background: v.$color-white;
+      background: rgba(255, 255, 255, 0.78);
       border-color: v.$color-primary-400;
-      box-shadow: 0 0 0 4px rgba(109, 94, 248, 0.14);
+      box-shadow: 0 0 0 4px rgba(125, 92, 246, 0.14), v.$shadow-sm;
     }
   }
 
@@ -44,7 +44,7 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    @include m.glass-panel($blur: v.$glass-blur-sm, $bg: v.$glass-bg-strong, $radius: v.$radius-md);
+    @include m.glass-panel($blur: v.$glass-blur-md, $bg: v.$glass-bg-strong, $radius: v.$radius-lg);
     z-index: v.$z-dropdown;
     max-height: 360px;
     overflow-y: auto;
@@ -64,15 +64,15 @@
     transition: background-color v.$transition-fast;
 
     &:hover {
-      background: rgba(109, 94, 248, 0.1);
+      background: rgba(125, 92, 246, 0.1);
     }
   }
 
   &__result-type {
     font-size: v.$font-size-xs;
     color: v.$color-text-muted;
-    background: v.$color-gray-100;
-    border-radius: v.$radius-sm;
+    background: rgba(255, 255, 255, 0.62);
+    border-radius: v.$radius-full;
     padding: 1px v.$space-2;
     flex-shrink: 0;
   }

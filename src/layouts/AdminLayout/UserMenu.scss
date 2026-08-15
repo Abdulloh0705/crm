@@ -5,11 +5,15 @@
   @include m.flex(center, flex-start, v.$space-2);
   @include m.focus-ring;
   padding: v.$space-1 v.$space-2 v.$space-1 v.$space-1;
-  border-radius: v.$radius-md;
-  transition: background-color v.$transition-fast;
+  border-radius: v.$radius-lg;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  transition: background-color v.$transition-fast, transform v.$transition-fast, box-shadow v.$transition-fast;
 
   &:hover {
-    background: rgba(109, 94, 248, 0.08);
+    background: rgba(255, 255, 255, 0.62);
+    transform: translateY(-1px);
+    box-shadow: v.$shadow-sm;
   }
 
   &__meta {

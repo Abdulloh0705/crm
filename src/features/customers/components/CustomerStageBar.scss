@@ -13,8 +13,8 @@
     gap: v.$space-2;
     padding: v.$space-2 v.$space-4;
     border-radius: v.$radius-full;
-    border: 1px solid v.$color-border;
-    background: v.$color-bg-surface;
+    border: 1px solid rgba(255, 255, 255, 0.66);
+    background: rgba(255, 255, 255, 0.46);
     font-size: v.$font-size-sm;
     font-weight: v.$font-weight-medium;
     color: v.$color-text-secondary;
@@ -25,16 +25,16 @@
     }
 
     &--active {
-      border-color: v.$color-primary-500;
+      border-color: rgba(125, 92, 246, 0.36);
       color: v.$color-primary-700;
-      background: v.$color-primary-100;
+      background: rgba(235, 231, 255, 0.72);
     }
   }
 
   &__count {
     padding: 0 v.$space-2;
     border-radius: v.$radius-full;
-    background: rgba(0, 0, 0, 0.06);
+    background: rgba(255, 255, 255, 0.58);
     font-size: v.$font-size-xs;
     font-weight: v.$font-weight-semibold;
     min-width: 20px;
@@ -42,6 +42,6 @@
   }
 
   &__pill--active &__count {
-    background: rgba(109, 94, 248, 0.16);
+    background: rgba(125, 92, 246, 0.14);
   }
 }

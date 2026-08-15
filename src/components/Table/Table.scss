@@ -5,6 +5,9 @@
   @include m.card-surface;
   @include m.custom-scrollbar;
   overflow-x: auto;
+  border-radius: v.$radius-xl;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
 }
 
 .table {
@@ -12,8 +15,8 @@
   font-size: v.$font-size-sm;
 
   thead {
-    background: v.$color-gray-50;
-    border-bottom: 1px solid v.$color-border;
+    background: rgba(255, 255, 255, 0.48);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.68);
   }
 
   th {
@@ -24,12 +27,12 @@
     white-space: nowrap;
     font-size: v.$font-size-xs;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
   }
 
   td {
     padding: v.$space-3 v.$space-4;
-    border-bottom: 1px solid v.$color-border;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
     color: v.$color-text-primary;
     vertical-align: middle;
   }
@@ -37,7 +40,7 @@
   tbody tr {
     transition: background-color v.$transition-fast;
     &:hover {
-      background: v.$color-primary-50;
+      background: rgba(245, 243, 255, 0.62);
     }
     &:last-child td {
       border-bottom: none;

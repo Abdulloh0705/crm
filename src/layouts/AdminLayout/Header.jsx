@@ -1,7 +1,6 @@
 import { useUI } from '../../store/UIContext'
 import { MenuIcon } from '../../components/icons/Icons'
 import { UserMenu } from './UserMenu'
-import { GlobalSearch } from '../../components/GlobalSearch/GlobalSearch'
 import { NotificationsDropdown } from '../../features/notifications/NotificationsDropdown'
 import './Header.scss'
 
@@ -16,7 +15,6 @@ export function Header({ title }) {
         </button>
         <h1 className="header__title">{title}</h1>
       </div>
-      <GlobalSearch />
       <div className="header__right">
         <NotificationsDropdown />
         <UserMenu />

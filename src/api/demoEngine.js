@@ -71,6 +71,7 @@ const db = {
   users: [],
   teams: [],
   customers: [],
+  customerStages: [],
   customerGroups: [],
   customerFieldDefs: [],
   programCatalog: [],
@@ -88,6 +89,60 @@ const db = {
   attachments: [],
   notifications: [],
   roles: [],
+}
+
+const DEFAULT_CUSTOMER_STAGES = [
+  { id: 'NEW', label: 'Yangi' },
+  { id: 'CONTACTED', label: 'Gaplashilgan' },
+  { id: 'IN_PROGRESS', label: 'Jarayonda' },
+  { id: 'FOLLOW_UP', label: 'Qayta aloqaga chiqish' },
+  { id: 'FUTURE_SALE', label: 'Keyinchalik sotuv' },
+  { id: 'DEPOSIT_RECEIVED', label: 'Zaklad olingan' },
+  { id: 'PAID', label: 'To‘lov qilindi' },
+  { id: 'INSTALLATION_REQUIRED', label: 'O‘rnatish kerak' },
+  { id: 'INSTALLED', label: 'O‘rnatib bo‘ldi' },
+]
+
+const LEGACY_CUSTOMER_STAGE_MAP = {
+  ORDERED: 'DEPOSIT_RECEIVED',
+  PAYMENT_PENDING: 'DEPOSIT_RECEIVED',
+  INSTALLING: 'INSTALLATION_REQUIRED',
+  DONE: 'INSTALLED',
+}
+
+function defaultCustomerStageId() {
+  return db.customerStages.find((item) => item.label === 'Yangi')?.id || 'NEW'
+}
+
+function normalizeCustomerStage(stage) {
+  const fallback = defaultCustomerStageId()
+  const mapped = LEGACY_CUSTOMER_STAGE_MAP[stage] || stage || fallback
+  return db.customerStages.some((item) => item.id === mapped) ? mapped : fallback
+}
+
+function normalizeCustomerAmount(amount) {
+  if (amount === '' || amount == null) return 0
+  const numeric = Number(amount)
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0
+}
+
+function normalizeCustomerRecord(customer) {
+  customer.stage = normalizeCustomerStage(customer.stage)
+  customer.amount = normalizeCustomerAmount(customer.amount)
+  customer.programs = Array.isArray(customer.programs)
+    ? customer.programs.map((program) => ({
+        id: program.id || uid(),
+        version: '',
+        startDate: '',
+        installedDate: '',
+        status: 'NEW',
+        subscriptionUntil: '',
+        notes: '',
+        createdAt: program.createdAt || now(),
+        ...program,
+      }))
+    : []
+  return customer
 }
 
 // Uploaded file bytes never go through JSON/localStorage — kept in memory
@@ -123,12 +178,13 @@ function seed() {
     permissions: [
       'dashboard.view',
       'customers.view', 'customers.create', 'customers.edit',
+      'customer-groups.view', 'customer-groups.create', 'customer-groups.edit',
       'businesses.view', 'businesses.create', 'businesses.edit',
       'leads.view', 'leads.create', 'leads.edit', 'leads.assign', 'leads.convert',
       'deals.view', 'deals.create', 'deals.edit', 'deals.changeStage',
       'quotations.view', 'quotations.create', 'quotations.edit', 'quotations.send',
       'payments.view',
-      'tasks.view', 'tasks.create', 'tasks.edit',
+      'tasks.view',
       'activities.view', 'activities.create',
       'attachments.create', 'comments.create',
       'notifications.view',
@@ -148,7 +204,7 @@ function seed() {
     permissions: [
       'dashboard.view', 'customers.view',
       'installations.view', 'installations.edit',
-      'tasks.view', 'tasks.create', 'tasks.edit',
+      'tasks.view',
       'activities.view', 'activities.create',
       'attachments.create', 'comments.create', 'notifications.view',
     ],
@@ -167,6 +223,7 @@ function seed() {
     permissions: [
       'dashboard.view', 'profit.view', 'reports.view',
       'customers.view', 'customers.create', 'customers.edit',
+      'customer-groups.view', 'customer-groups.create', 'customer-groups.edit',
       'businesses.view', 'businesses.create', 'businesses.edit',
       'leads.view', 'leads.create', 'leads.edit', 'leads.assign', 'leads.convert',
       'deals.view', 'deals.create', 'deals.edit', 'deals.changeStage', 'deals.assign',
@@ -216,8 +273,9 @@ function seed() {
     ],
     groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
+    amount: 4500000,
     status: 'active',
-    stage: 'INSTALLING',
+    stage: 'INSTALLATION_REQUIRED',
     createdAt: now(),
   }
   const customerSardor = {
@@ -240,6 +298,7 @@ function seed() {
     ],
     groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
+    amount: 0,
     status: 'active',
     stage: 'CONTACTED',
     createdAt: now(),
@@ -263,6 +322,7 @@ function seed() {
     ],
     groupIds: [],
     assignedEmployee: { id: manager.id, name: manager.name },
+    amount: 0,
     status: 'active',
     createdAt: now(),
   }
@@ -540,7 +600,9 @@ function migrateCustomers() {
     if (c.source === undefined) c.source = ''
     if (c.customFields === undefined) c.customFields = {}
     if (c.groupIds === undefined) c.groupIds = []
-    if (c.stage === undefined) c.stage = 'NEW'
+    if (!c.stage) c.stage = 'NEW'
+    if (c.amount === undefined || c.amount === null || c.amount === '') c.amount = customerDealAmount(c.id)
+    c.amount = normalizeCustomerAmount(c.amount)
     if (!Array.isArray(c.programs)) c.programs = []
     c.programs = c.programs.map((p) => {
       const program =
@@ -554,6 +616,62 @@ function migrateCustomers() {
   })
 }
 
+function slugStageName(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘'`]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase()
+}
+
+function makeCustomerStageId(name) {
+  const base = slugStageName(name) || 'BOSQICH'
+  let id = `CUSTOM_${base}`
+  let suffix = 2
+  while (db.customerStages.some((stage) => stage.id === id)) {
+    id = `CUSTOM_${base}_${suffix}`
+    suffix += 1
+  }
+  return id
+}
+
+function migrateCustomerStages() {
+  if (!Array.isArray(db.customerStages)) db.customerStages = []
+  const byId = new Map(db.customerStages.map((stage) => [stage.id, stage]))
+  DEFAULT_CUSTOMER_STAGES.forEach((stage, index) => {
+    if (byId.has(stage.id)) {
+      const existing = byId.get(stage.id)
+      Object.assign(existing, { label: existing.label || stage.label, order: existing.order ?? index, system: true })
+    } else {
+      db.customerStages.push({ ...stage, order: index - 0.1, system: true, createdAt: now() })
+    }
+  })
+  db.customers.forEach((customer) => {
+    customer.stage = LEGACY_CUSTOMER_STAGE_MAP[customer.stage] || customer.stage || 'NEW'
+    if (customer.stage && !db.customerStages.some((stage) => stage.id === customer.stage)) {
+      db.customerStages.push({ id: customer.stage, label: customer.stage, order: db.customerStages.length, system: false, createdAt: now() })
+    }
+  })
+  reindexCustomerStages()
+}
+
+function customerStageLabel(stageId) {
+  return db.customerStages.find((stage) => stage.id === stageId)?.label || stageId || ''
+}
+
+function orderedCustomerStages() {
+  return [...db.customerStages].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+}
+
+function reindexCustomerStages(stages = orderedCustomerStages()) {
+  stages.forEach((stage, index) => {
+    stage.order = index
+  })
+  db.customerStages = stages
+}
+
 const persisted = loadPersistedDb()
 if (persisted) {
   Object.assign(db, persisted)
@@ -562,6 +680,8 @@ if (persisted) {
   persistDb()
 }
 migrateCustomers()
+migrateCustomerStages()
+persistDb()
 
 // ---------------------------------------------------------------------------
 // Session (localStorage-backed, mirrors a cookie-based session for demo
@@ -624,6 +744,8 @@ function paginate(list, query = {}, { searchFields = [], relationFields = [], fi
   if (query.source) result = result.filter((item) => item.source === query.source)
   if (query.method) result = result.filter((item) => item.method === query.method)
   if (query.type) result = result.filter((item) => item.type === query.type)
+  if (query.stage) result = result.filter((item) => item.stage === query.stage)
+  if (query.priority) result = result.filter((item) => item.priority === query.priority)
 
   // Extra resource-specific predicate (e.g. Customers' city/program filters,
   // which aren't plain own-field or relation-id matches) — kept optional so
@@ -759,8 +881,10 @@ function matchRoute(method, path) {
 // ---------------------------------------------------------------------------
 post('/auth/login', ({ body }) => {
   const { email, password } = body || {}
-  const user = db.users.find((u) => u.email === email && u.password === password)
+  const login = String(email || '').trim()
+  const user = db.users.find((u) => (u.email === login || u.username === login) && u.password === password)
   if (!user) throw new ApiError('Email yoki parol noto‘g‘ri', { status: 401 })
+  if (user.status === 'inactive') throw new ApiError('Bu xodim nofaol holatda', { status: 403 })
   writeSession({ userId: user.id })
   return publicUser(user)
 }, { auth: false })
@@ -773,7 +897,14 @@ post('/auth/logout', () => {
 get('/auth/me', ({ user }) => publicUser(user))
 
 patch('/users/me', ({ user, body }) => {
-  Object.assign(user, body)
+  const { currentPassword, newPassword, confirmPassword, ...profile } = body || {}
+  Object.assign(user, profile)
+  if (newPassword) {
+    if (!currentPassword || user.password !== currentPassword) throw new ApiError('Joriy parol noto‘g‘ri', { status: 400 })
+    if (String(newPassword).length < 6) throw new ApiError('Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak', { status: 400 })
+    if (confirmPassword && newPassword !== confirmPassword) throw new ApiError('Yangi parol tasdiqlanmadi', { status: 400 })
+    user.password = newPassword
+  }
   persistDb()
   return publicUser(user)
 })
@@ -781,8 +912,14 @@ patch('/users/me', ({ user, body }) => {
 // ---------------------------------------------------------------------------
 // Employees
 // ---------------------------------------------------------------------------
-get('/employees', ({ query }) => paginate(db.users, query, { searchFields: ['name', 'email'] }))
-get('/employees/:id', ({ params }) => publicUser(findOrThrow(db.users, params.id, 'Xodim')))
+get('/employees', ({ query }) => paginate(db.users, query, {
+  searchFields: ['name', 'email', 'username'],
+  enrichFn: (user) => ({ ...publicUser(user), performance: employeePerformance(user.id) }),
+}))
+get('/employees/:id', ({ params }) => {
+  const employee = findOrThrow(db.users, params.id, 'Xodim')
+  return { ...publicUser(employee), performance: employeePerformance(employee.id) }
+})
 post('/employees', ({ body }) => {
   const employee = { id: uid(), status: 'active', createdAt: now(), permissions: [], ...body, password: body.password || 'changeme123' }
   db.users.push(employee)
@@ -887,6 +1024,7 @@ function registerResource(path, collection, { searchFields = ['name'], relationF
     const item = findOrThrow(collection, params.id, path)
     Object.assign(item, body, { updatedAt: now() })
     enrichReferences(item)
+    if (path === 'customers') normalizeCustomerRecord(item)
     persistDb()
     return item
   })
@@ -926,16 +1064,47 @@ function customerLastContactAt(customerId) {
 function customerDeals(customerId) {
   return db.deals.filter((d) => d.customer?.id === customerId)
 }
+function customerDealAmount(customerId) {
+  return customerDeals(customerId).reduce((sum, deal) => sum + Number(deal.value || 0), 0)
+}
+function employeePerformance(employeeId) {
+  const customers = db.customers.filter((c) => c.assignedEmployee?.id === employeeId)
+  const deals = db.deals.filter((d) => d.salesEmployee?.id === employeeId)
+  const revenue = customers.reduce((sum, customer) => sum + customerDealAmount(customer.id), 0)
+  const tasksCompleted = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'COMPLETED').length
+  const tasksInProgress = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'IN_PROGRESS').length
+  const installationsCompleted = db.installations.filter((i) => i.assignedEmployee?.id === employeeId && i.status === 'COMPLETED').length
+  const activeTasks = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && !['COMPLETED', 'CANCELLED'].includes(t.status)).length
+  const stageCounts = DEFAULT_CUSTOMER_STAGES.reduce((acc, stage) => ({ ...acc, [stage.id]: 0 }), {})
+  customers.forEach((customer) => {
+    const stage = LEGACY_CUSTOMER_STAGE_MAP[customer.stage] || customer.stage || 'NEW'
+    stageCounts[stage] = (stageCounts[stage] || 0) + 1
+  })
+  return {
+    customers: customers.length,
+    stageCounts,
+    stageStats: DEFAULT_CUSTOMER_STAGES.map((stage) => ({ id: stage.id, label: stage.label, count: stageCounts[stage.id] || 0 })),
+    deals: deals.length,
+    wonDeals: deals.filter((d) => d.stage === 'WON').length,
+    revenue,
+    tasksCompleted,
+    tasksInProgress,
+    activeTasks,
+    installationsCompleted,
+  }
+}
 // Kept in sync with features/customers/customers.constants.js's
 // CUSTOMER_STAGE_LABELS by hand — small, stable list, not worth importing
 // a frontend feature module into the API layer for.
 const STAGE_LABELS_FOR_SEARCH = {
   NEW: 'Yangi',
-  CONTACTED: 'Gaplashildi',
-  ORDERED: 'Buyurtma olindi',
+  CONTACTED: 'Gaplashilgan',
+  IN_PROGRESS: 'Jarayonda',
+  FOLLOW_UP: 'Qayta aloqaga chiqish',
+  DEPOSIT_RECEIVED: 'Zaklad olingan',
   PAID: 'To‘lov qilindi',
-  INSTALLING: 'O‘rnatish',
-  DONE: 'Tugallandi',
+  INSTALLATION_REQUIRED: 'O‘rnatish kerak',
+  INSTALLED: 'O‘rnatib bo‘ldi',
 }
 function customerPaymentStatus(customerId) {
   const dealIds = customerDeals(customerId).map((d) => d.id)
@@ -969,7 +1138,7 @@ get('/customers', ({ query, user }) => {
         ...businesses.map((b) => b.name),
         ...businesses.map((b) => b.city),
         ...customerProgramNames(item.id),
-        STAGE_LABELS_FOR_SEARCH[item.stage] || '',
+        customerStageLabel(item.stage) || STAGE_LABELS_FOR_SEARCH[item.stage] || '',
       ].join(' ')
     },
     enrichFn: (item) => ({
@@ -977,13 +1146,15 @@ get('/customers', ({ query, user }) => {
       lastContactAt: customerLastContactAt(item.id),
       paymentStatus: customerPaymentStatus(item.id),
       installationStatus: customerInstallationStatus(item.id),
+      dealAmount: customerDealAmount(item.id),
     }),
   })
 })
 get('/meta/customer-options', () => {
   const stageCounts = {}
   db.customers.forEach((c) => {
-    stageCounts[c.stage] = (stageCounts[c.stage] || 0) + 1
+    const stage = normalizeCustomerStage(c.stage)
+    stageCounts[stage] = (stageCounts[stage] || 0) + 1
   })
   return {
     cities: [...new Set(db.businesses.map((b) => b.city).filter(Boolean))].sort(),
@@ -991,9 +1162,75 @@ get('/meta/customer-options', () => {
     stageCounts,
   }
 })
+get('/meta/customer-stages', () => ({
+  items: orderedCustomerStages(),
+  total: db.customerStages.length,
+}))
+post('/meta/customer-stages', ({ body }) => {
+  const label = String(body?.name || body?.label || '').trim()
+  if (!label) throw new ApiError('Bosqich nomi kiritilishi shart', { status: 400 })
+  if (db.customerStages.some((stage) => stage.label.toLowerCase() === label.toLowerCase())) {
+    throw new ApiError('Bunday bosqich mavjud', { status: 400 })
+  }
+  const ordered = orderedCustomerStages()
+  const afterIndex = body?.afterStageId ? ordered.findIndex((item) => item.id === body.afterStageId) : ordered.length - 1
+  const insertIndex = afterIndex >= 0 ? afterIndex + 1 : ordered.length
+  const stage = { id: makeCustomerStageId(label), label, order: insertIndex, system: false, createdAt: now() }
+  ordered.splice(insertIndex, 0, stage)
+  reindexCustomerStages(ordered)
+  persistDb()
+  return stage
+})
+patch('/meta/customer-stages/:id', ({ params, body }) => {
+  const stage = findOrThrow(db.customerStages, params.id, 'Bosqich')
+  const label = String(body?.name || body?.label || stage.label).trim()
+  if (!label) throw new ApiError('Bosqich nomi kiritilishi shart', { status: 400 })
+  if (db.customerStages.some((item) => item.id !== stage.id && item.label.toLowerCase() === label.toLowerCase())) {
+    throw new ApiError('Bunday bosqich mavjud', { status: 400 })
+  }
+  stage.label = label
+
+  if (body?.direction === 'left' || body?.direction === 'right') {
+    const ordered = orderedCustomerStages()
+    const index = ordered.findIndex((item) => item.id === stage.id)
+    const targetIndex = body.direction === 'left' ? index - 1 : index + 1
+    if (index >= 0 && targetIndex >= 0 && targetIndex < ordered.length) {
+      ordered.splice(index, 1)
+      ordered.splice(targetIndex, 0, stage)
+      reindexCustomerStages(ordered)
+    }
+  } else if (body?.order !== undefined) {
+    const ordered = orderedCustomerStages().filter((item) => item.id !== stage.id)
+    const targetIndex = Math.max(0, Math.min(Number(body.order) || 0, ordered.length))
+    ordered.splice(targetIndex, 0, stage)
+    reindexCustomerStages(ordered)
+  }
+
+  persistDb()
+  return stage
+})
+del('/meta/customer-stages/:id', ({ params, body }) => {
+  const index = db.customerStages.findIndex((stage) => stage.id === params.id)
+  if (index === -1) throw new ApiError('Bosqich topilmadi', { status: 404 })
+  if (db.customerStages.length <= 1) throw new ApiError('Kamida bitta bosqich qolishi kerak', { status: 400 })
+  const affected = db.customers.filter((customer) => customer.stage === params.id)
+  if (affected.length > 0) {
+    const replacementStageId = body?.replacementStageId
+    if (!replacementStageId || replacementStageId === params.id || !db.customerStages.some((stage) => stage.id === replacementStageId)) {
+      throw new ApiError('Mijozlarni kochirish uchun boshqa bosqich tanlang', { status: 400, details: { count: affected.length } })
+    }
+    affected.forEach((customer) => {
+      customer.stage = replacementStageId
+    })
+  }
+  db.customerStages.splice(index, 1)
+  reindexCustomerStages()
+  persistDb()
+  return null
+})
 patch('/customers/:id/stage', ({ params, body }) => {
   const customer = findOrThrow(db.customers, params.id, 'Mijoz')
-  customer.stage = body.stage
+  customer.stage = normalizeCustomerStage(body.stage)
   persistDb()
   return customer
 })
@@ -1002,8 +1239,31 @@ patch('/customers/:id/stage', ({ params, body }) => {
 // registerResource POST only defaults `status`, not this second, unrelated
 // status field, so a bespoke create (skipCreate on the resource below,
 // same shadowing pattern used elsewhere in this file) is needed here too.
+post('/customers/bulk-move', ({ body }) => {
+  const ids = Array.isArray(body?.customerIds) ? body.customerIds : []
+  const stage = body?.stage ? normalizeCustomerStage(body.stage) : null
+  const targetGroupId = body?.targetGroupId || ''
+  const fromGroupId = body?.fromGroupId || ''
+  if (targetGroupId && !db.customerGroups.some((group) => group.id === targetGroupId)) {
+    throw new ApiError('Guruh topilmadi', { status: 400 })
+  }
+  const updated = []
+  ids.forEach((id) => {
+    const customer = db.customers.find((item) => item.id === id)
+    if (!customer) return
+    if (stage) customer.stage = stage
+    const groupIds = new Set(customer.groupIds || [])
+    if (fromGroupId && fromGroupId !== targetGroupId) groupIds.delete(fromGroupId)
+    if (targetGroupId) groupIds.add(targetGroupId)
+    customer.groupIds = [...groupIds]
+    updated.push(customer)
+  })
+  persistDb()
+  return { items: updated, total: updated.length }
+})
 post('/customers', ({ body }) => {
-  const customer = enrichReferences({ id: uid(), status: body.status || 'active', stage: body.stage || 'NEW', createdAt: now(), ...body })
+  const customer = enrichReferences({ id: uid(), status: body.status || 'active', stage: body.stage || defaultCustomerStageId(), amount: 0, createdAt: now(), ...body })
+  normalizeCustomerRecord(customer)
   db.customers.push(customer)
   persistDb()
   return customer
@@ -1254,8 +1514,8 @@ post('/payments', ({ body, user }) => {
 })
 
 registerResource('tasks', db.tasks, { searchFields: ['title'], relationFields: ['customerId', 'businessId', 'leadId', 'dealId', 'installationId'], skipCreate: true })
-post('/tasks', ({ body }) => {
-  const task = enrichReferences({ id: uid(), status: 'TODO', createdAt: now(), ...body })
+post('/tasks', ({ body, user }) => {
+  const task = enrichReferences({ id: uid(), status: 'TODO', assignedEmployeeId: user.id, createdAt: now(), ...body })
   db.tasks.push(task)
   persistDb()
   return task
@@ -1467,16 +1727,7 @@ get('/analytics/installations-by-status', () => {
   return Object.entries(counts).map(([status, count]) => ({ status, count }))
 })
 get('/analytics/employee-performance/:id', ({ params }) => {
-  const employeeId = params.id
-  const leads = db.leads.filter((l) => l.assignedEmployee?.id === employeeId)
-  const deals = db.deals.filter((d) => d.salesEmployee?.id === employeeId)
-  const wonDeals = deals.filter((d) => d.stage === 'WON')
-  const revenue = db.payments
-    .filter((p) => p.status === 'PAID' && deals.some((d) => d.id === p.dealId))
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0)
-  const tasksCompleted = db.tasks.filter((t) => t.assignedEmployeeId === employeeId && t.status === 'COMPLETED').length
-  const installationsCompleted = db.installations.filter((i) => i.assignedEmployee?.id === employeeId && i.status === 'COMPLETED').length
-  return { leads: leads.length, deals: deals.length, wonDeals: wonDeals.length, revenue, tasksCompleted, installationsCompleted }
+  return employeePerformance(params.id)
 })
 
 // ---------------------------------------------------------------------------

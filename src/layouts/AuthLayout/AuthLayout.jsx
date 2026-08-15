@@ -9,8 +9,8 @@ export function AuthLayout() {
       </div>
       <div className="auth-layout__panel">
         <div className="auth-layout__brand">
-          <span className="auth-layout__logo-mark">B</span>
-          <span className="auth-layout__brand-name">BOLD YECHIM</span>
+          <span className="auth-layout__logo-mark">Y</span>
+          <span className="auth-layout__brand-name">YECHIM</span>
         </div>
         <div className="auth-layout__card">
           <Outlet />

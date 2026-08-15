@@ -18,3 +18,10 @@
     font-size: v.$font-size-sm;
   }
 }
+
+.profile-form__section-title {
+  margin: v.$space-5 0 v.$space-3;
+  font-size: v.$font-size-sm;
+  font-weight: v.$font-weight-semibold;
+  color: v.$color-text-primary;
+}

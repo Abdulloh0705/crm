@@ -13,6 +13,8 @@ import { Alert } from '../../../components/Alert/Alert'
 import { Spinner } from '../../../components/Spinner/Spinner'
 import { Pagination } from '../../../components/Pagination/Pagination'
 import { PermissionGate } from '../../roles/PermissionGate'
+import { useAuth } from '../../auth/useAuth'
+import { usePermissions } from '../../roles/usePermissions'
 import { useToast } from '../../../store/ToastContext'
 import { useAction } from '../../../hooks/useAction'
 import { useDisclosure } from '../../../hooks/useDisclosure'
@@ -21,11 +23,15 @@ import { InboxIcon, PlusIcon } from '../../../components/icons/Icons'
 
 export function TasksListPage() {
   const { tasks, total, params, canViewAll, setStatus, setPriority, setAssignedToMe, setPage, loading, error, refetch } = useTasks()
+  const { user } = useAuth()
+  const { can } = usePermissions()
   const { isOpen, open, close } = useDisclosure()
   const [employees, setEmployees] = useState([])
   const toast = useToast()
 
   const createAction = useAction(tasksService.create)
+  const updateStatusAction = useAction(({ id, status }) => tasksService.update(id, { status }))
+  const [statusLoadingId, setStatusLoadingId] = useState(null)
 
   useEffect(() => {
     employeesService
@@ -42,6 +48,23 @@ export function TasksListPage() {
       refetch()
     } catch (err) {
       toast.error(err.message || 'Vazifa qo‘shishda xatolik yuz berdi')
+    }
+  }
+
+  const canEditTaskStatus = (task) => can('tasks.edit') || task.assignedEmployee?.id === user?.id || task.assignedEmployeeId === user?.id
+  const getStatusOptions = (task) => (can('tasks.edit') ? TASK_STATUSES : ['TODO', 'IN_PROGRESS', 'COMPLETED'].filter((status) => status === task.status || status !== 'TODO'))
+
+  const handleStatusChange = async (task, status) => {
+    if (task.status === status) return
+    setStatusLoadingId(task.id)
+    try {
+      await updateStatusAction.run({ id: task.id, status })
+      toast.success('Vazifa holati yangilandi')
+      refetch()
+    } catch (err) {
+      toast.error(err.message || 'Vazifa holatini yangilashda xatolik yuz berdi')
+    } finally {
+      setStatusLoadingId(null)
     }
   }
 
@@ -114,7 +137,13 @@ export function TasksListPage() {
 
       {!loading && !error && tasks.length > 0 && (
         <>
-          <TaskTable tasks={tasks} />
+          <TaskTable
+            tasks={tasks}
+            onStatusChange={handleStatusChange}
+            canEditStatus={canEditTaskStatus}
+            getStatusOptions={getStatusOptions}
+            statusLoadingId={statusLoadingId}
+          />
           <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
         </>
       )}

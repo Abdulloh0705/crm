@@ -6,24 +6,25 @@
   flex-wrap: wrap;
   align-items: center;
   gap: v.$space-2;
-  margin-bottom: v.$space-4;
+  margin-bottom: v.$space-3;
 
   &__chip {
     display: flex;
     align-items: center;
     gap: v.$space-1;
-    padding: v.$space-1 v.$space-1 v.$space-1 v.$space-3;
+    min-height: 32px;
+    padding: 2px v.$space-1 2px v.$space-3;
     border-radius: v.$radius-full;
-    border: 1px solid v.$color-border;
-    background: v.$color-bg-surface;
-    font-size: v.$font-size-sm;
+    border: 1px solid rgba(255, 255, 255, 0.66);
+    background: rgba(255, 255, 255, 0.46);
+    font-size: v.$font-size-xs;
     color: v.$color-text-secondary;
     transition: border-color v.$transition-fast, color v.$transition-fast;
 
     &--active {
-      border-color: v.$color-primary-500;
+      border-color: rgba(125, 92, 246, 0.34);
       color: v.$color-primary-700;
-      background: v.$color-primary-100;
+      background: rgba(235, 231, 255, 0.72);
     }
   }
 
@@ -45,10 +46,11 @@
   }
 
   &__add {
-    padding: v.$space-1 v.$space-3;
+    min-height: 32px;
+    padding: 2px v.$space-3;
     border-radius: v.$radius-full;
-    border: 1px dashed v.$color-border;
-    font-size: v.$font-size-sm;
+    border: 1px dashed rgba(125, 92, 246, 0.28);
+    font-size: v.$font-size-xs;
     color: v.$color-text-muted;
     &:hover {
       color: v.$color-primary-700;

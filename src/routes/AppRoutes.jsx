@@ -64,7 +64,14 @@ export function AppRoutes() {
               </RequirePermission>
             }
           />
-          <Route path="employees/:id" element={<EmployeeDetailPage />} />
+          <Route
+            path="employees/:id"
+            element={
+              <RequirePermission permission="employees.view">
+                <EmployeeDetailPage />
+              </RequirePermission>
+            }
+          />
 
           <Route path="profile" element={<ProfilePage />} />
 
@@ -153,13 +160,14 @@ export function AppRoutes() {
           />
 
           <Route
-            path="crm/tasks"
+            path="tasks"
             element={
               <RequirePermission permission="tasks.view">
                 <TasksListPage />
               </RequirePermission>
             }
           />
+          <Route path="crm/tasks" element={<Navigate to="/admin/tasks" replace />} />
 
           <Route
             path="crm/activities"

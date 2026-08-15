@@ -4,9 +4,9 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(25, 21, 49, 0.42);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(25, 21, 49, 0.34);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: v.$z-modal-backdrop;
   @include m.flex(center, center);
   padding: v.$space-4;
@@ -14,7 +14,7 @@
 }
 
 .modal {
-  @include m.glass-panel($blur: v.$glass-blur-lg, $bg: v.$glass-bg-strong, $radius: v.$radius-xl);
+  @include m.glass-panel($blur: v.$glass-blur-lg, $bg: rgba(255, 255, 255, 0.66), $radius: v.$radius-xl);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -25,7 +25,7 @@
   &__header {
     @include m.flex(center, space-between);
     padding: v.$space-5 v.$space-6;
-    border-bottom: 1px solid v.$color-border;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.58);
   }
 
   &__title {
@@ -37,11 +37,11 @@
     @include m.flex(center, center);
     width: 30px;
     height: 30px;
-    border-radius: v.$radius-md;
+    border-radius: v.$radius-lg;
     color: v.$color-text-muted;
     transition: background-color v.$transition-fast, color v.$transition-fast;
     &:hover {
-      background: v.$color-gray-100;
+      background: rgba(255, 255, 255, 0.56);
       color: v.$color-text-primary;
     }
   }
@@ -54,7 +54,7 @@
   &__footer {
     @include m.flex(center, flex-end, v.$space-3);
     padding: v.$space-4 v.$space-6;
-    border-top: 1px solid v.$color-border;
+    border-top: 1px solid rgba(255, 255, 255, 0.58);
   }
 
   &--danger &__title {
