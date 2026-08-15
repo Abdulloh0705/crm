@@ -2,28 +2,19 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { classNames } from '../../utils/classNames'
 import { useUI } from '../../store/UIContext'
 import { usePermissions } from '../../features/roles/usePermissions'
-import {
-  DashboardIcon,
-  BuildingIcon,
-  UsersIcon,
-  TeamIcon,
-  SettingsIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  InboxIcon,
-} from '../../components/icons/Icons'
+import { BuildingIcon, SettingsIcon, ChevronDownIcon, ChevronLeftIcon, InboxIcon } from '../../components/icons/Icons'
 import './Sidebar.scss'
 
+// Bitrix24-style hub: everything customer-related (business, lead, deal,
+// quotation, product, installation, task, call, note, file) is reached from
+// the Customer detail page's tabs, not from a separate top-level module per
+// entity — so the CRM submenu only lists the handful of list pages that need
+// their own dedicated queue view, not every entity in the data model.
 const CRM_LINKS = [
-  { to: '/admin/crm/dashboard', label: 'CRM statistikasi', permission: 'dashboard.view' },
   { to: '/admin/crm/customers', label: 'Mijozlar', permission: 'customers.view' },
-  { to: '/admin/crm/businesses', label: 'Bizneslar', permission: 'businesses.view' },
   { to: '/admin/crm/leads', label: 'Murojaatlar', permission: 'leads.view' },
   { to: '/admin/crm/deals', label: 'Savdolar', permission: 'deals.view' },
-  { to: '/admin/crm/quotations', label: 'Takliflar', permission: 'quotations.view' },
   { to: '/admin/crm/payments', label: 'To‘lovlar', permission: 'payments.view' },
-  { to: '/admin/crm/tasks', label: 'Vazifalar', permission: 'tasks.view' },
-  { to: '/admin/crm/activities', label: 'Faoliyatlar', permission: 'activities.view' },
   { to: '/admin/crm/installations', label: 'O‘rnatishlar', permission: 'installations.view' },
 ]
 
@@ -33,7 +24,7 @@ export function Sidebar() {
   const location = useLocation()
 
   const visibleCrmLinks = CRM_LINKS.filter((link) => !link.permission || can(link.permission))
-  const crmSectionActive = location.pathname.startsWith('/admin/crm')
+  const crmSectionActive = location.pathname.startsWith('/admin/crm') && !location.pathname.startsWith('/admin/crm/tasks')
 
   return (
     <>
@@ -50,39 +41,13 @@ export function Sidebar() {
         </div>
 
         <nav className="sidebar__nav">
-          {can('dashboard.view') && (
-            <NavLink
-              to="/admin"
-              end
-              className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
-              onClick={closeMobileSidebar}
-            >
-              <span className="sidebar__link-icon">
-                <DashboardIcon />
-              </span>
-              <span className="sidebar__link-label">Boshqaruv paneli</span>
-            </NavLink>
-          )}
-
-          <NavLink
-            to="/admin/my-work"
-            className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
-            onClick={closeMobileSidebar}
-          >
-            <span className="sidebar__link-icon">
-              <InboxIcon />
-            </span>
-            <span className="sidebar__link-label">Mening ishlarim</span>
-          </NavLink>
-
           {visibleCrmLinks.length > 0 && (
             <>
-              <div className="sidebar__section-label">CRM</div>
               <div className={classNames('sidebar__link', crmSectionActive && 'sidebar__link--active')}>
                 <span className="sidebar__link-icon">
                   <BuildingIcon />
                 </span>
-                <span className="sidebar__link-label">Savdo jarayoni</span>
+                <span className="sidebar__link-label">CRM</span>
                 <ChevronDownIcon width={14} height={14} style={{ marginLeft: 'auto' }} />
               </div>
               <div className="sidebar__sublinks">
@@ -100,31 +65,18 @@ export function Sidebar() {
             </>
           )}
 
-          <div className="sidebar__section-label">Boshqaruv</div>
-
-          {can('employees.view') && (
+          {can('tasks.view') && (
             <NavLink
-              to="/admin/employees"
+              to="/admin/crm/tasks"
               className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
               onClick={closeMobileSidebar}
             >
               <span className="sidebar__link-icon">
-                <UsersIcon />
+                <InboxIcon />
               </span>
-              <span className="sidebar__link-label">Xodimlar</span>
+              <span className="sidebar__link-label">Vazifalar</span>
             </NavLink>
           )}
-
-          <NavLink
-            to="/admin/teams"
-            className={({ isActive }) => classNames('sidebar__link', isActive && 'sidebar__link--active')}
-            onClick={closeMobileSidebar}
-          >
-            <span className="sidebar__link-icon">
-              <TeamIcon />
-            </span>
-            <span className="sidebar__link-label">Jamoalar</span>
-          </NavLink>
 
           {can('settings.view') && (
             <NavLink

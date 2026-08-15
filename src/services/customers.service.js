@@ -7,6 +7,7 @@ export const customersService = {
   create: (payload) => httpClient.post(CUSTOMERS.CREATE, payload),
   update: (id, payload) => httpClient.patch(CUSTOMERS.UPDATE(id), payload),
   deactivate: (id) => httpClient.post(CUSTOMERS.DEACTIVATE(id)),
+  getFilterOptions: () => httpClient.get(CUSTOMERS.FILTER_OPTIONS),
 
   // Related records — plain list() calls filtered by customerId, not
   // separate nested endpoints, to keep the backend surface small.

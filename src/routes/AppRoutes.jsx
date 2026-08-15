@@ -5,17 +5,13 @@ import { RequirePermission } from './RequirePermission'
 import { AuthLayout } from '../layouts/AuthLayout/AuthLayout'
 import { AdminLayout } from '../layouts/AdminLayout/AdminLayout'
 import { LoginPage } from '../features/auth/pages/LoginPage'
-import { DashboardPage } from '../pages/DashboardPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { UnauthorizedPage } from '../pages/UnauthorizedPage'
 import { EmployeesListPage } from '../features/employees/pages/EmployeesListPage'
 import { EmployeeDetailPage } from '../features/employees/pages/EmployeeDetailPage'
-import { TeamsListPage } from '../features/teams/pages/TeamsListPage'
-import { TeamDetailPage } from '../features/teams/pages/TeamDetailPage'
 import { SettingsPage } from '../features/settings/pages/SettingsPage'
 import { ProfilePage } from '../features/profile/pages/ProfilePage'
 import { MyWorkPage } from '../features/myWork/pages/MyWorkPage'
-import { CrmDashboardPage } from '../features/dashboard/pages/CrmDashboardPage'
 import { CustomersListPage } from '../features/customers/pages/CustomersListPage'
 import { CustomerDetailPage } from '../features/customers/pages/CustomerDetailPage'
 import { BusinessesListPage } from '../features/businesses/pages/BusinessesListPage'
@@ -56,7 +52,10 @@ export function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<DashboardPage />} />
+          {/* Mijoz — CRM'ning markazi: kirilgan zahoti to'g'ridan-to'g'ri
+              Mijozlar ro'yxatiga tushiladi, alohida statistik boshqaruv
+              paneli emas (BOLD YECHIM CRM strukturasi, 1-bosqich). */}
+          <Route index element={<Navigate to="crm/customers" replace />} />
 
           <Route
             path="employees"
@@ -67,9 +66,6 @@ export function AppRoutes() {
             }
           />
           <Route path="employees/:id" element={<EmployeeDetailPage />} />
-
-          <Route path="teams" element={<TeamsListPage />} />
-          <Route path="teams/:id" element={<TeamDetailPage />} />
 
           <Route path="profile" element={<ProfilePage />} />
 
@@ -86,15 +82,6 @@ export function AppRoutes() {
 
           {/* CRM business flow: Customer -> Business -> Lead -> Deal ->
               Deal Items -> Quotation -> Payment -> Installation -> Activity/Task */}
-          <Route
-            path="crm/dashboard"
-            element={
-              <RequirePermission permission="dashboard.view">
-                <CrmDashboardPage />
-              </RequirePermission>
-            }
-          />
-
           <Route
             path="crm/customers"
             element={

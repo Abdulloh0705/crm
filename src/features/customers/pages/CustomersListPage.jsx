@@ -3,6 +3,7 @@ import { useCustomers } from '../customers.hooks'
 import { customersService } from '../../../services/customers.service'
 import { employeesService } from '../../../services/employees.service'
 import { CustomerTable } from '../components/CustomerTable'
+import { CustomerCard } from '../components/CustomerCard'
 import { CustomerForm } from '../components/CustomerForm'
 import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
 import { Button } from '../../../components/Button/Button'
@@ -19,11 +20,29 @@ import { useToast } from '../../../store/ToastContext'
 import { useAction } from '../../../hooks/useAction'
 import { useDisclosure } from '../../../hooks/useDisclosure'
 import { InboxIcon, PlusIcon, SearchIcon } from '../../../components/icons/Icons'
+import { classNames } from '../../../utils/classNames'
 
 export function CustomersListPage() {
-  const { customers, total, params, setSearch, setStatus, setSort, setPage, loading, error, refetch } = useCustomers()
+  const {
+    view,
+    setView,
+    customers,
+    total,
+    params,
+    setSearch,
+    setStatus,
+    setAssignedEmployeeId,
+    setCity,
+    setProgram,
+    setSort,
+    setPage,
+    loading,
+    error,
+    refetch,
+  } = useCustomers()
   const { isOpen, open, close } = useDisclosure()
   const [employees, setEmployees] = useState([])
+  const [filterOptions, setFilterOptions] = useState({ cities: [], programs: [] })
   const confirm = useConfirm()
   const toast = useToast()
 
@@ -35,6 +54,10 @@ export function CustomersListPage() {
       .list({ pageSize: 100 })
       .then((res) => setEmployees((res?.items ?? []).filter((e) => e.status === 'active')))
       .catch(() => setEmployees([]))
+    customersService
+      .getFilterOptions()
+      .then((res) => setFilterOptions({ cities: res?.cities ?? [], programs: res?.programs ?? [] }))
+      .catch(() => setFilterOptions({ cities: [], programs: [] }))
   }, [])
 
   const handleCreate = async (values) => {
@@ -73,11 +96,21 @@ export function CustomersListPage() {
           <h2 className="page-header__title">Mijozlar</h2>
           <p className="page-header__subtitle">Mijozlar ro‘yxati</p>
         </div>
-        <PermissionGate permission="customers.create">
-          <Button onClick={open}>
-            <PlusIcon width={16} height={16} /> Yangi mijoz
-          </Button>
-        </PermissionGate>
+        <div className="page-header__actions">
+          <div className="view-toggle">
+            <button type="button" className={classNames('view-toggle__btn', view === 'card' && 'view-toggle__btn--active')} onClick={() => setView('card')}>
+              Card
+            </button>
+            <button type="button" className={classNames('view-toggle__btn', view === 'list' && 'view-toggle__btn--active')} onClick={() => setView('list')}>
+              Ro‘yxat
+            </button>
+          </div>
+          <PermissionGate permission="customers.create">
+            <Button onClick={open}>
+              <PlusIcon width={16} height={16} /> Yangi mijoz
+            </Button>
+          </PermissionGate>
+        </div>
       </div>
 
       <div className="filters-row">
@@ -85,9 +118,13 @@ export function CustomersListPage() {
           <span className="input-group__icon">
             <SearchIcon width={16} height={16} />
           </span>
-          <Input placeholder="Ism, telefon yoki email" value={params.search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Ism, telefon, email, biznes, shahar yoki dastur"
+            value={params.search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <Select value={params.status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 180 }}>
+        <Select value={params.status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 160 }}>
           <option value="">Barcha holatlar</option>
           {CUSTOMER_STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -95,7 +132,31 @@ export function CustomersListPage() {
             </option>
           ))}
         </Select>
-        <Select value={params.sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 200 }}>
+        <Select value={params.assignedEmployeeId} onChange={(e) => setAssignedEmployeeId(e.target.value)} style={{ maxWidth: 180 }}>
+          <option value="">Barcha xodimlar</option>
+          {employees.map((employee) => (
+            <option key={employee.id} value={employee.id}>
+              {employee.name}
+            </option>
+          ))}
+        </Select>
+        <Select value={params.city} onChange={(e) => setCity(e.target.value)} style={{ maxWidth: 160 }}>
+          <option value="">Barcha shaharlar</option>
+          {filterOptions.cities.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </Select>
+        <Select value={params.program} onChange={(e) => setProgram(e.target.value)} style={{ maxWidth: 180 }}>
+          <option value="">Barcha dasturlar</option>
+          {filterOptions.programs.map((program) => (
+            <option key={program} value={program}>
+              {program}
+            </option>
+          ))}
+        </Select>
+        <Select value={params.sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 180 }}>
           <option value="-createdAt">Yangi qo‘shilgan</option>
           <option value="createdAt">Eski qo‘shilgan</option>
           <option value="name">Ism (A-Z)</option>
@@ -119,9 +180,20 @@ export function CustomersListPage() {
         <EmptyState icon={<InboxIcon width={22} height={22} />} title="Mijozlar topilmadi" description="Hozircha mijozlar ro‘yxati bo‘sh." />
       )}
 
-      {!loading && !error && customers.length > 0 && (
+      {!loading && !error && customers.length > 0 && view === 'list' && (
         <>
           <CustomerTable customers={customers} onDeactivate={handleDeactivate} />
+          <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
+        </>
+      )}
+
+      {!loading && !error && customers.length > 0 && view === 'card' && (
+        <>
+          <div className="customer-card-grid">
+            {customers.map((customer) => (
+              <CustomerCard key={customer.id} customer={customer} />
+            ))}
+          </div>
           <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
         </>
       )}

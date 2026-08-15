@@ -2,15 +2,33 @@ import { useState } from 'react'
 import { classNames } from '../../../utils/classNames'
 import { GeneralSection } from '../sections/GeneralSection'
 import { UsersRolesSection } from '../sections/UsersRolesSection'
-import { TeamsSection } from '../sections/TeamsSection'
-import './SettingsPage.scss'
+import { EmployeesSection } from '../sections/EmployeesSection'
+import { ComingSoonSection } from '../sections/ComingSoonSection'
 
-// Registry pattern: adding Notifications/Security/Integrations later is just
-// one more entry here plus its section component — no routing changes needed.
+// Registry pattern: adding a section later is just one more entry here plus
+// its section component — no routing changes needed. Jamoalar (Teams) is
+// deliberately not a section here — BOLD YECHIM CRM strukturasi (1-bosqich)
+// treats teams as an internal employee-assignment detail, not a module of
+// its own; the underlying feature/route still exists, just unlisted.
 const SECTIONS = [
-  { id: 'general', label: 'Umumiy', Component: GeneralSection },
-  { id: 'users-roles', label: 'Foydalanuvchilar va rollar', Component: UsersRolesSection },
-  { id: 'teams', label: 'Jamoalar', Component: TeamsSection },
+  { id: 'employees', label: 'Xodimlar', Component: EmployeesSection },
+  { id: 'users-roles', label: 'Rollar va ruxsatlar', Component: UsersRolesSection },
+  {
+    id: 'programs',
+    label: 'Dasturlar',
+    Component: () => (
+      <ComingSoonSection title="Dasturlar" description="BOLD YECHIM mahsulotlari katalogi keyingi bosqichda qo‘shiladi." />
+    ),
+  },
+  {
+    id: 'customer-fields',
+    label: 'Mijoz maydonlari',
+    Component: () => (
+      <ComingSoonSection title="Mijoz maydonlari" description="Mijoz kartochkasiga qo‘shimcha maydonlar sozlash keyingi bosqichda qo‘shiladi." />
+    ),
+  },
+  // "Umumiy sozlamalar" (kompaniya nomi, vaqt mintaqasi) = CRM sozlamalari.
+  { id: 'general', label: 'CRM sozlamalari', Component: GeneralSection },
 ]
 
 export function SettingsPage() {

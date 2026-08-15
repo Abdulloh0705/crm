@@ -198,6 +198,7 @@ function seed() {
     phone: '+998901234500',
     email: 'ali.valiyev@example.com',
     notes: 'VIP mijoz',
+    programs: ['Bito POS'],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
     createdAt: now(),
@@ -208,6 +209,7 @@ function seed() {
     phone: '+998907654321',
     email: 'sardor.rahimov@example.com',
     notes: '',
+    programs: ['Bito POS', 'Bito Kassa'],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
     createdAt: now(),
@@ -218,6 +220,7 @@ function seed() {
     phone: '+998909998877',
     email: 'javohir.t@example.com',
     notes: '',
+    programs: ['Bito Kassa'],
     assignedEmployee: { id: manager.id, name: manager.name },
     status: 'active',
     createdAt: now(),
@@ -260,7 +263,7 @@ function seed() {
     phone: '+998909998877',
     email: 'javohir.t@example.com',
     address: 'Yunusobod tumani, 8-uy',
-    city: 'Toshkent',
+    city: 'Samarqand',
     status: 'active',
     assignedEmployee: { id: manager.id, name: manager.name },
     notes: '',
@@ -503,7 +506,7 @@ function publicUser(user) {
 // ---------------------------------------------------------------------------
 // Shared helpers (ported from mock-server/app.js almost verbatim)
 // ---------------------------------------------------------------------------
-function paginate(list, query = {}, { searchFields = [], relationFields = [] } = {}) {
+function paginate(list, query = {}, { searchFields = [], relationFields = [], filterFn, enrichFn, extraSearchText } = {}) {
   let result = [...list]
 
   relationFields.forEach((field) => {
@@ -515,9 +518,17 @@ function paginate(list, query = {}, { searchFields = [], relationFields = [] } =
   if (query.method) result = result.filter((item) => item.method === query.method)
   if (query.type) result = result.filter((item) => item.type === query.type)
 
+  // Extra resource-specific predicate (e.g. Customers' city/program filters,
+  // which aren't plain own-field or relation-id matches) — kept optional so
+  // every other registerResource() call is unaffected.
+  if (typeof filterFn === 'function') result = result.filter((item) => filterFn(item, query))
+
   if (query.search) {
     const term = String(query.search).toLowerCase()
-    result = result.filter((item) => searchFields.some((field) => String(item[field] || '').toLowerCase().includes(term)))
+    result = result.filter((item) => {
+      if (searchFields.some((field) => String(item[field] || '').toLowerCase().includes(term))) return true
+      return typeof extraSearchText === 'function' && extraSearchText(item).toLowerCase().includes(term)
+    })
   }
 
   if (String(query.assignedToMe) === 'true' && query.__currentUserId) {
@@ -539,7 +550,8 @@ function paginate(list, query = {}, { searchFields = [], relationFields = [] } =
   const total = result.length
   const page = Number(query.page) || 1
   const pageSize = Number(query.pageSize) || 20
-  const items = result.slice((page - 1) * pageSize, page * pageSize)
+  let items = result.slice((page - 1) * pageSize, page * pageSize)
+  if (typeof enrichFn === 'function') items = items.map(enrichFn)
   return { items, total, page, pageSize }
 }
 
@@ -764,6 +776,39 @@ function registerResource(path, collection, { searchFields = ['name'], relationF
     return item
   })
 }
+
+// Bitrix-style customer hub: search/filter needs to reach across the
+// customer's linked business (city) and deal items (which BOLD YECHIM
+// product/"dastur" they use), not just the customer's own fields. Registered
+// before registerResource('customers', ...) so this wins the first-match
+// router (same shadowing pattern documented on registerResource above) —
+// the generic GET it also registers is dead code, kept for readability.
+function customerBusinesses(customerId) {
+  return db.businesses.filter((b) => b.customer?.id === customerId)
+}
+function customerPrograms(customerId) {
+  const list = db.customers.find((c) => c.id === customerId)?.programs
+  return Array.isArray(list) ? list : []
+}
+get('/customers', ({ query, user }) => {
+  return paginate(db.customers, { ...query, __currentUserId: user.id }, {
+    searchFields: ['name', 'phone', 'email'],
+    relationFields: ['assignedEmployeeId'],
+    filterFn: (item, q) => {
+      if (q.city && !customerBusinesses(item.id).some((b) => b.city === q.city)) return false
+      if (q.program && !customerPrograms(item.id).includes(q.program)) return false
+      return true
+    },
+    extraSearchText: (item) => {
+      const businesses = customerBusinesses(item.id)
+      return [...businesses.map((b) => b.name), ...businesses.map((b) => b.city), ...customerPrograms(item.id)].join(' ')
+    },
+  })
+})
+get('/meta/customer-options', () => ({
+  cities: [...new Set(db.businesses.map((b) => b.city).filter(Boolean))].sort(),
+  programs: [...new Set(db.customers.flatMap((c) => c.programs || []))].sort(),
+}))
 
 registerResource('customers', db.customers, { searchFields: ['name', 'phone', 'email'] })
 post('/customers/:id/deactivate', ({ params }) => {

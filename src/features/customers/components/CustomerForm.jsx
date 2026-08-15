@@ -6,10 +6,14 @@ import { Button } from '../../../components/Button/Button'
 import { validate, rules } from '../../../utils/validators'
 import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
 
-const DEFAULT_VALUES = { name: '', phone: '', email: '', assignedEmployeeId: '', status: 'active' }
+const DEFAULT_VALUES = { name: '', phone: '', email: '', assignedEmployeeId: '', status: 'active', programsText: '' }
 
 export function CustomerForm({ initialValues = DEFAULT_VALUES, employees = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
-  const [values, setValues] = useState({ ...DEFAULT_VALUES, ...initialValues })
+  const [values, setValues] = useState({
+    ...DEFAULT_VALUES,
+    ...initialValues,
+    programsText: (initialValues.programs || []).join(', '),
+  })
   const [errors, setErrors] = useState({})
 
   const handleChange = (field) => (event) => setValues((v) => ({ ...v, [field]: event.target.value }))
@@ -23,7 +27,14 @@ export function CustomerForm({ initialValues = DEFAULT_VALUES, employees = [], s
     })
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
-    onSubmit(values)
+    const { programsText, ...rest } = values
+    onSubmit({
+      ...rest,
+      programs: programsText
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean),
+    })
   }
 
   return (
@@ -59,6 +70,10 @@ export function CustomerForm({ initialValues = DEFAULT_VALUES, employees = [], s
             </option>
           ))}
         </Select>
+      </FormField>
+
+      <FormField label="Dastur(lar)" hint="Vergul bilan ajrating, masalan: Bito POS, Bito Kassa">
+        <Input value={values.programsText} onChange={handleChange('programsText')} disabled={loading} />
       </FormField>
 
       <div className="card__footer" style={{ paddingLeft: 0, paddingRight: 0 }}>

@@ -53,6 +53,9 @@ export const CUSTOMERS = {
   CREATE: '/customers',
   UPDATE: (id) => `/customers/${id}`,
   DEACTIVATE: (id) => `/customers/${id}/deactivate`,
+  // Distinct filter option sets (city, dastur/program) for the customer hub's
+  // filter row — cheap to compute from existing records, no separate catalog.
+  FILTER_OPTIONS: '/meta/customer-options',
 }
 
 export const BUSINESSES = {

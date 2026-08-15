@@ -3,13 +3,14 @@ import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import './AdminLayout.scss'
 
+// Businesses/Quotations/Activities keep their titles even though they no
+// longer have a sidebar entry — they're still reachable as detail pages
+// linked from the Customer/Deal hub (CRM strukturasi, 1-bosqich).
 const TITLE_MAP = [
   { prefix: '/admin/employees', title: 'Xodimlar' },
-  { prefix: '/admin/teams', title: 'Jamoalar' },
   { prefix: '/admin/settings', title: 'Sozlamalar' },
   { prefix: '/admin/profile', title: 'Profil' },
   { prefix: '/admin/my-work', title: 'Mening ishlarim' },
-  { prefix: '/admin/crm/dashboard', title: 'CRM statistikasi' },
   { prefix: '/admin/crm/customers', title: 'Mijozlar' },
   { prefix: '/admin/crm/businesses', title: 'Bizneslar' },
   { prefix: '/admin/crm/leads', title: 'Murojaatlar' },
@@ -19,7 +20,6 @@ const TITLE_MAP = [
   { prefix: '/admin/crm/tasks', title: 'Vazifalar' },
   { prefix: '/admin/crm/activities', title: 'Faoliyatlar' },
   { prefix: '/admin/crm/installations', title: 'O‘rnatishlar' },
-  { prefix: '/admin', title: 'Boshqaruv paneli' },
 ]
 
 function resolveTitle(pathname) {
