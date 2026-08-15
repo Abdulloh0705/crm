@@ -3,24 +3,20 @@ import { classNames } from '../../../utils/classNames'
 import { GeneralSection } from '../sections/GeneralSection'
 import { UsersRolesSection } from '../sections/UsersRolesSection'
 import { EmployeesSection } from '../sections/EmployeesSection'
+import { ProgramCatalogSection } from '../sections/ProgramCatalogSection'
 import { CustomerFieldsSection } from '../sections/CustomerFieldsSection'
-import { ComingSoonSection } from '../sections/ComingSoonSection'
+import { ProfilePage } from '../../profile/pages/ProfilePage'
 
 // Registry pattern: adding a section later is just one more entry here plus
 // its section component — no routing changes needed. Jamoalar (Teams) is
-// deliberately not a section here — BOLD YECHIM CRM strukturasi (1-bosqich)
-// treats teams as an internal employee-assignment detail, not a module of
-// its own; the underlying feature/route still exists, just unlisted.
+// deliberately not a section here — BOLD YECHIM CRM strukturasi treats
+// teams as an internal employee-assignment detail, not a module of its
+// own; the underlying feature/route still exists, just unlisted.
 const SECTIONS = [
+  { id: 'profile', label: 'Profil', Component: ProfilePage },
   { id: 'employees', label: 'Xodimlar', Component: EmployeesSection },
   { id: 'users-roles', label: 'Rollar va ruxsatlar', Component: UsersRolesSection },
-  {
-    id: 'programs',
-    label: 'Dasturlar',
-    Component: () => (
-      <ComingSoonSection title="Dasturlar" description="BOLD YECHIM mahsulotlari katalogi keyingi bosqichda qo‘shiladi." />
-    ),
-  },
+  { id: 'programs', label: 'Dasturlar', Component: ProgramCatalogSection },
   { id: 'customer-fields', label: 'Mijoz maydonlari', Component: CustomerFieldsSection },
   // "Umumiy sozlamalar" (kompaniya nomi, vaqt mintaqasi) = CRM sozlamalari.
   { id: 'general', label: 'CRM sozlamalari', Component: GeneralSection },

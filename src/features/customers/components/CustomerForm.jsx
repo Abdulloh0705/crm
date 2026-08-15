@@ -12,7 +12,7 @@ import { ChevronDownIcon } from '../../../components/icons/Icons'
 import { classNames } from '../../../utils/classNames'
 import './CustomerForm.scss'
 
-const DEFAULT_ADDRESS = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '' }
+const DEFAULT_ADDRESS = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '', lat: '', lng: '' }
 
 const DEFAULT_VALUES = {
   firstName: '',
@@ -169,6 +169,14 @@ export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saq
         <FormField label="Qo‘shimcha manzil">
           <Input value={values.address.extra} onChange={setAddress('extra')} disabled={loading} />
         </FormField>
+        <div className="detail-grid">
+          <FormField label="Kenglik (lat)" hint="Xarita integratsiyasi uchun tayyor maydon">
+            <Input value={values.address.lat} onChange={setAddress('lat')} disabled={loading} placeholder="41.311081" />
+          </FormField>
+          <FormField label="Uzunlik (lng)">
+            <Input value={values.address.lng} onChange={setAddress('lng')} disabled={loading} placeholder="69.240562" />
+          </FormField>
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Mijozga tegishli biznes" hint="ixtiyoriy">

@@ -4,6 +4,7 @@ import { TaskPriorityBadge, TaskStatusBadge } from './TaskBadges'
 import { formatDate } from '../../../utils/formatDate'
 
 function relatedLabel(row) {
+  if (row.program?.name) return `Dastur: ${row.program.name}`
   if (row.deal?.name) return `Savdo: ${row.deal.name}`
   if (row.lead?.title) return `Murojaat: ${row.lead.title}`
   if (row.business?.name) return `Biznes: ${row.business.name}`

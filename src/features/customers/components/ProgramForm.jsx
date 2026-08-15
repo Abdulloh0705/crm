@@ -6,17 +6,36 @@ import { Button } from '../../../components/Button/Button'
 import { validate, rules } from '../../../utils/validators'
 import { PROGRAM_STATUSES, PROGRAM_STATUS_LABELS } from '../customers.constants'
 
-const DEFAULT_VALUES = { name: '', version: '', startDate: '', installedDate: '', status: 'ACTIVE', subscriptionUntil: '', notes: '' }
+const DEFAULT_VALUES = {
+  programId: '',
+  name: '',
+  version: '',
+  startDate: '',
+  installedDate: '',
+  status: 'NEW',
+  subscriptionUntil: '',
+  assignedEmployeeId: '',
+  notes: '',
+}
 
-export function ProgramForm({ initialValues = DEFAULT_VALUES, submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
+// `catalog` = admin-defined programs (Sozlamalar -> Dasturlar). Picking one
+// seeds name/version from the catalog entry; version stays editable per
+// install since the deployed copy can lag the catalog's current version.
+export function ProgramForm({ initialValues = DEFAULT_VALUES, catalog = [], employees = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
   const [values, setValues] = useState({ ...DEFAULT_VALUES, ...initialValues })
   const [errors, setErrors] = useState({})
 
   const handleChange = (field) => (event) => setValues((v) => ({ ...v, [field]: event.target.value }))
 
+  const handleCatalogChange = (event) => {
+    const programId = event.target.value
+    const entry = catalog.find((p) => p.id === programId)
+    setValues((v) => ({ ...v, programId, name: entry?.name ?? v.name, version: entry?.version || v.version }))
+  }
+
   const handleSubmit = (event) => {
     event.preventDefault()
-    const nextErrors = validate(values, { name: [rules.required('Dastur nomi kiritilishi shart')] })
+    const nextErrors = validate(values, { name: [rules.required('Dastur tanlanishi shart')] })
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
     onSubmit(values)
@@ -25,7 +44,18 @@ export function ProgramForm({ initialValues = DEFAULT_VALUES, submitLabel = 'Saq
   return (
     <form onSubmit={handleSubmit} noValidate>
       <FormField label="Dastur" required error={errors.name}>
-        <Input value={values.name} onChange={handleChange('name')} error={!!errors.name} disabled={loading} placeholder="Masalan: Bito POS" />
+        {catalog.length > 0 ? (
+          <Select value={values.programId} onChange={handleCatalogChange} disabled={loading}>
+            <option value="">Tanlanmagan</option>
+            {catalog.map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.name}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input value={values.name} onChange={handleChange('name')} error={!!errors.name} disabled={loading} placeholder="Masalan: Bito" />
+        )}
       </FormField>
       <div className="detail-grid">
         <FormField label="Versiya">
@@ -48,6 +78,16 @@ export function ProgramForm({ initialValues = DEFAULT_VALUES, submitLabel = 'Saq
         </FormField>
         <FormField label="Obuna muddati">
           <Input type="date" value={values.subscriptionUntil} onChange={handleChange('subscriptionUntil')} disabled={loading} />
+        </FormField>
+        <FormField label="Mas'ul xodim">
+          <Select value={values.assignedEmployeeId} onChange={handleChange('assignedEmployeeId')} disabled={loading}>
+            <option value="">Tanlanmagan</option>
+            {employees.map((employee) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name}
+              </option>
+            ))}
+          </Select>
         </FormField>
       </div>
       <FormField label="Izoh">

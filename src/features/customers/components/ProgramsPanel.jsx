@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { customersService } from '../../../services/customers.service'
+import { useAsync } from '../../../hooks/useAsync'
+import { customersService, programCatalogService } from '../../../services/customers.service'
+import { tasksService } from '../../../services/tasks.service'
 import { Card } from '../../../components/Card/Card'
 import { Badge } from '../../../components/Badge/Badge'
 import { Button } from '../../../components/Button/Button'
@@ -7,6 +9,7 @@ import { Modal } from '../../../components/Modal/Modal'
 import { EmptyState } from '../../../components/EmptyState/EmptyState'
 import { Dropdown, DropdownItem } from '../../../components/Dropdown/Dropdown'
 import { ProgramForm } from './ProgramForm'
+import { TaskForm } from '../../tasks/components/TaskForm'
 import { PROGRAM_STATUS_LABELS, PROGRAM_STATUS_BADGE_VARIANTS } from '../customers.constants'
 import { useAction } from '../../../hooks/useAction'
 import { useDisclosure } from '../../../hooks/useDisclosure'
@@ -16,9 +19,14 @@ import { formatDate } from '../../../utils/formatDate'
 import { MoreIcon, InboxIcon } from '../../../components/icons/Icons'
 import './ProgramsPanel.scss'
 
-export function ProgramsPanel({ customerId, programs = [], onChanged }) {
+export function ProgramsPanel({ customerId, programs = [], employees = [], onChanged }) {
+  const { data: catalogData } = useAsync(() => programCatalogService.list({ pageSize: 100 }), [])
+  const catalog = catalogData?.items ?? []
+
   const [editingProgram, setEditingProgram] = useState(null)
+  const [taskProgram, setTaskProgram] = useState(null)
   const programModal = useDisclosure()
+  const taskModal = useDisclosure()
   const confirm = useConfirm()
   const toast = useToast()
 
@@ -26,6 +34,7 @@ export function ProgramsPanel({ customerId, programs = [], onChanged }) {
     editingProgram ? customersService.updateProgram(customerId, editingProgram.id, values) : customersService.addProgram(customerId, values)
   )
   const removeAction = useAction((programId) => customersService.removeProgram(customerId, programId))
+  const createTaskAction = useAction(tasksService.create)
 
   const openCreate = () => {
     setEditingProgram(null)
@@ -34,6 +43,10 @@ export function ProgramsPanel({ customerId, programs = [], onChanged }) {
   const openEdit = (program) => {
     setEditingProgram(program)
     programModal.open()
+  }
+  const openCreateTask = (program) => {
+    setTaskProgram(program)
+    taskModal.open()
   }
 
   const handleSave = async (values) => {
@@ -64,6 +77,19 @@ export function ProgramsPanel({ customerId, programs = [], onChanged }) {
     }
   }
 
+  const handleCreateTask = async (values) => {
+    try {
+      await createTaskAction.run(values)
+      toast.success('Vazifa yaratildi')
+      taskModal.close()
+      onChanged?.()
+    } catch (err) {
+      toast.error(err.message || 'Vazifa yaratishda xatolik yuz berdi')
+    }
+  }
+
+  const employeeName = (id) => employees.find((e) => e.id === id)?.name
+
   return (
     <>
       <Card
@@ -89,7 +115,11 @@ export function ProgramsPanel({ customerId, programs = [], onChanged }) {
                 <div className="program-row__meta text-muted text-xs">
                   {program.installedDate ? `O‘rnatilgan: ${formatDate(program.installedDate)}` : program.startDate ? `Boshlangan: ${formatDate(program.startDate)}` : ''}
                   {program.subscriptionUntil ? ` · Obuna: ${formatDate(program.subscriptionUntil)} gacha` : ''}
+                  {employeeName(program.assignedEmployeeId) ? ` · Mas'ul: ${employeeName(program.assignedEmployeeId)}` : ''}
                 </div>
+                <Button size="sm" variant="ghost" onClick={() => openCreateTask(program)}>
+                  + Vazifa
+                </Button>
                 <Dropdown
                   trigger={(toggle) => (
                     <button type="button" className="header__icon-btn" onClick={toggle} aria-label="Amallar">
@@ -111,10 +141,30 @@ export function ProgramsPanel({ customerId, programs = [], onChanged }) {
       <Modal open={programModal.isOpen} title={editingProgram ? 'Dasturni tahrirlash' : 'Dastur qo‘shish'} onClose={programModal.close}>
         <ProgramForm
           initialValues={editingProgram ?? undefined}
+          catalog={catalog}
+          employees={employees}
           submitLabel={editingProgram ? 'Saqlash' : 'Qo‘shish'}
           loading={saveAction.loading}
           onSubmit={handleSave}
           onCancel={programModal.close}
+        />
+      </Modal>
+
+      {/* "Dasturdan vazifa yaratish" — mijoz+dastur bilan avtomatik bog'langan
+          vazifa, dastur qatoridagi "+ Vazifa" tugmasidan ochiladi. */}
+      <Modal open={taskModal.isOpen} title="Vazifa yaratish" onClose={taskModal.close}>
+        <TaskForm
+          initialValues={{
+            title: taskProgram ? `${taskProgram.name} o‘rnatish` : '',
+            priority: 'MEDIUM',
+            assignedEmployeeId: taskProgram?.assignedEmployeeId || '',
+          }}
+          context={{ customerId, programId: taskProgram?.id, program: taskProgram ? { id: taskProgram.id, name: taskProgram.name } : undefined }}
+          employees={employees}
+          submitLabel="Yaratish"
+          loading={createTaskAction.loading}
+          onSubmit={handleCreateTask}
+          onCancel={taskModal.close}
         />
       </Modal>
     </>

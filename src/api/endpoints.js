@@ -82,6 +82,14 @@ export const MESSAGES = {
   CREATE: '/messages',
 }
 
+export const PROGRAM_CATALOG = {
+  LIST: '/program-catalog',
+  DETAIL: (id) => `/program-catalog/${id}`,
+  CREATE: '/program-catalog',
+  UPDATE: (id) => `/program-catalog/${id}`,
+  DELETE: (id) => `/program-catalog/${id}`,
+}
+
 export const BUSINESSES = {
   LIST: '/businesses',
   DETAIL: (id) => `/businesses/${id}`,

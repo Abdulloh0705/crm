@@ -1,5 +1,5 @@
 import { httpClient } from '../api/httpClient'
-import { CUSTOMERS, CUSTOMER_GROUPS, CUSTOMER_FIELD_DEFS, MESSAGES, BUSINESSES, LEADS, DEALS, PAYMENTS, INSTALLATIONS, ACTIVITIES, TASKS } from '../api/endpoints'
+import { CUSTOMERS, CUSTOMER_GROUPS, CUSTOMER_FIELD_DEFS, PROGRAM_CATALOG, MESSAGES, BUSINESSES, LEADS, DEALS, PAYMENTS, INSTALLATIONS, ACTIVITIES, TASKS } from '../api/endpoints'
 
 export const customersService = {
   list: (params) => httpClient.get(CUSTOMERS.LIST, { params }),
@@ -45,4 +45,11 @@ export const customerFieldDefsService = {
   create: (payload) => httpClient.post(CUSTOMER_FIELD_DEFS.CREATE, payload),
   update: (id, payload) => httpClient.patch(CUSTOMER_FIELD_DEFS.UPDATE(id), payload),
   remove: (id) => httpClient.delete(CUSTOMER_FIELD_DEFS.DELETE(id)),
+}
+
+export const programCatalogService = {
+  list: (params) => httpClient.get(PROGRAM_CATALOG.LIST, { params }),
+  create: (payload) => httpClient.post(PROGRAM_CATALOG.CREATE, payload),
+  update: (id, payload) => httpClient.patch(PROGRAM_CATALOG.UPDATE(id), payload),
+  remove: (id) => httpClient.delete(PROGRAM_CATALOG.DELETE(id)),
 }

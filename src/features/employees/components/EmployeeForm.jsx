@@ -11,7 +11,8 @@ import { RefreshIcon, ChevronDownIcon } from '../../../components/icons/Icons'
 import './EmployeeForm.scss'
 
 const DEFAULT_VALUES = {
-  name: '',
+  firstName: '',
+  lastName: '',
   email: '',
   phone: '',
   username: '',
@@ -33,10 +34,16 @@ function generatePassword() {
   return out
 }
 
+function splitName(name = '') {
+  const parts = name.trim().split(/\s+/)
+  return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
+}
+
 export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
   const isEditing = Boolean(initialValues?.id)
   const [values, setValues] = useState(() => ({
     ...DEFAULT_VALUES,
+    ...splitName(initialValues.name),
     ...initialValues,
     permissions: initialValues.permissions ?? ROLE_DEFAULT_PERMISSIONS[initialValues.role ?? DEFAULT_VALUES.role] ?? [],
   }))
@@ -57,7 +64,7 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
   const handleSubmit = (event) => {
     event.preventDefault()
     const rulesMap = {
-      name: [rules.required('Ism kiritilishi shart')],
+      firstName: [rules.required('Ism kiritilishi shart')],
       email: [rules.required('Email kiritilishi shart'), rules.email()],
       role: [rules.required('Rol tanlanishi shart')],
       username: [rules.required('Login kiritilishi shart')],
@@ -72,7 +79,8 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    const payload = { ...values }
+    const { firstName, lastName, ...rest } = values
+    const payload = { ...rest, name: `${firstName} ${lastName}`.trim() }
     if (isEditing) {
       // Password changes go through the dedicated "Parolni yangilash" action
       // on the Employee detail page — never silently touched by this form.
@@ -87,9 +95,14 @@ export function EmployeeForm({ initialValues = DEFAULT_VALUES, teams = [], submi
   return (
     <form onSubmit={handleSubmit} noValidate>
       <div className="employee-form__section-title">Shaxsiy ma'lumotlar</div>
-      <FormField label="To‘liq ism" required error={errors.name}>
-        <Input value={values.name} onChange={handleChange('name')} error={!!errors.name} disabled={loading} />
-      </FormField>
+      <div className="detail-grid">
+        <FormField label="Ism" required error={errors.firstName}>
+          <Input value={values.firstName} onChange={handleChange('firstName')} error={!!errors.firstName} disabled={loading} />
+        </FormField>
+        <FormField label="Familiya">
+          <Input value={values.lastName} onChange={handleChange('lastName')} disabled={loading} />
+        </FormField>
+      </div>
 
       <div className="detail-grid">
         <FormField label="Elektron pochta" required error={errors.email}>

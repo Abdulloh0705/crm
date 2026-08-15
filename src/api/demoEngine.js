@@ -73,6 +73,7 @@ const db = {
   customers: [],
   customerGroups: [],
   customerFieldDefs: [],
+  programCatalog: [],
   messages: [],
   businesses: [],
   leads: [],
@@ -234,7 +235,7 @@ function seed() {
     customFields: {},
     programs: [
       { id: uid(), name: 'Bito POS', version: '2.4', startDate: '2026-07-10', installedDate: '2026-07-12', status: 'ACTIVE', subscriptionUntil: '2027-07-12', notes: '', createdAt: programCreatedAt },
-      { id: uid(), name: 'Bito Kassa', version: '1.2', startDate: '2026-07-10', installedDate: '', status: 'PENDING', subscriptionUntil: '', notes: 'O‘rnatish kutilmoqda', createdAt: programCreatedAt },
+      { id: uid(), name: 'Bito Kassa', version: '1.2', startDate: '2026-07-10', installedDate: '', status: 'INSTALLING', subscriptionUntil: '', notes: 'O‘rnatish kutilmoqda', createdAt: programCreatedAt },
     ],
     groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
@@ -280,6 +281,13 @@ function seed() {
     options: [],
     createdAt: now(),
   })
+
+  db.programCatalog.push(
+    { id: uid(), name: 'Bito', type: 'POS', version: '2.4', description: 'Restoran va do‘konlar uchun savdo nazorati dasturi', createdAt: now() },
+    { id: uid(), name: 'Bito Kassa', type: 'Kassa', version: '1.2', description: 'Kassa apparati uchun dastur', createdAt: now() },
+    { id: uid(), name: 'Bito CRM', type: 'CRM', version: '1.0', description: 'Mijozlar bilan ishlash tizimi', createdAt: now() },
+    { id: uid(), name: 'Bito Ombor', type: 'Ombor', version: '1.0', description: 'Ombor va zaxira hisobi', createdAt: now() }
+  )
 
   db.messages.push(
     { id: uid(), customerId: customerAli.id, senderType: 'employee', senderName: sales.name, text: 'Assalomu alaykum, Ali aka! Bito POS o‘rnatish bo‘yicha bog‘lanmoqchi edim.', createdAt: now() },
@@ -513,9 +521,15 @@ function seed() {
 // `programs: string[]`, no address/phone2/telegram/customFields/groupIds) to
 // the current shape — runs unconditionally so it's a no-op on already-fresh
 // data and safe to re-run every load.
+// Old status keys (from before the Yangi/O'rnatilmoqda/Faol/To'xtatilgan/
+// Tugagan relabel) mapped onto their closest new equivalent.
+const LEGACY_PROGRAM_STATUS_MAP = { PENDING: 'INSTALLING', CANCELLED: 'SUSPENDED' }
+
 function migrateCustomers() {
   db.customers.forEach((c) => {
-    if (!c.address) c.address = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '' }
+    if (!c.address) c.address = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '', lat: '', lng: '' }
+    if (c.address.lat === undefined) c.address.lat = ''
+    if (c.address.lng === undefined) c.address.lng = ''
     if (c.phone2 === undefined) c.phone2 = ''
     if (c.telegram === undefined) c.telegram = ''
     if (c.birthDate === undefined) c.birthDate = ''
@@ -525,11 +539,15 @@ function migrateCustomers() {
     if (c.customFields === undefined) c.customFields = {}
     if (c.groupIds === undefined) c.groupIds = []
     if (!Array.isArray(c.programs)) c.programs = []
-    c.programs = c.programs.map((p) =>
-      typeof p === 'string'
-        ? { id: uid(), name: p, version: '', startDate: '', installedDate: '', status: 'ACTIVE', subscriptionUntil: '', notes: '', createdAt: c.createdAt || now() }
-        : p
-    )
+    c.programs = c.programs.map((p) => {
+      const program =
+        typeof p === 'string'
+          ? { id: uid(), name: p, version: '', startDate: '', installedDate: '', status: 'ACTIVE', subscriptionUntil: '', notes: '', createdAt: c.createdAt || now() }
+          : p
+      if (LEGACY_PROGRAM_STATUS_MAP[program.status]) program.status = LEGACY_PROGRAM_STATUS_MAP[program.status]
+      if (program.assignedEmployeeId === undefined) program.assignedEmployeeId = ''
+      return program
+    })
   })
 }
 
@@ -990,6 +1008,21 @@ del('/customer-field-defs/:id', ({ params }) => {
   const index = db.customerFieldDefs.findIndex((f) => f.id === params.id)
   if (index === -1) throw new ApiError('Maydon topilmadi', { status: 404 })
   db.customerFieldDefs.splice(index, 1)
+  persistDb()
+  return null
+})
+
+// ---------------------------------------------------------------------------
+// Program catalog (admin-defined, Sozlamalar → "Dasturlar") — the list a
+// customer's "+ Dastur qo'shish" select reads from, so adding a new program
+// here is the only thing needed to make it available everywhere, no
+// frontend redeploy.
+// ---------------------------------------------------------------------------
+registerResource('program-catalog', db.programCatalog, { searchFields: ['name', 'type'] })
+del('/program-catalog/:id', ({ params }) => {
+  const index = db.programCatalog.findIndex((p) => p.id === params.id)
+  if (index === -1) throw new ApiError('Dastur topilmadi', { status: 404 })
+  db.programCatalog.splice(index, 1)
   persistDb()
   return null
 })

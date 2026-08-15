@@ -40,7 +40,7 @@ import { formatDate } from '../../../utils/formatDate'
 import { MoreIcon, PlusIcon, PhoneIcon } from '../../../components/icons/Icons'
 import './CustomerWorkspace.scss'
 
-const SIDE_TABS = [
+const BASE_SIDE_TABS = [
   { id: 'overview', label: 'Umumiy' },
   { id: 'programs', label: 'Dasturlar' },
   { id: 'leads', label: 'Murojaatlar' },
@@ -72,6 +72,12 @@ export function CustomerWorkspace({ customerId: id }) {
   const [employees, setEmployees] = useState([])
   const { data: dealsData } = useAsync(() => customersService.getDeals(id), [id, refreshKey])
   const customerDeals = dealsData?.items ?? []
+  // Cheap counts for the side-tab labels (section 14: "Savdolar: 2,
+  // To'lovlar: 3..." at a glance) — separate from each tab's own RelatedList
+  // fetch, which still owns the actual list rendering.
+  const { data: paymentsCountData } = useAsync(() => customersService.getPayments(id), [id, refreshKey])
+  const { data: tasksCountData } = useAsync(() => customersService.getTasks(id), [id, refreshKey])
+  const { data: installationsCountData } = useAsync(() => customersService.getInstallations(id), [id, refreshKey])
 
   const paymentModal = useDisclosure()
   const installationModal = useDisclosure()
@@ -235,6 +241,17 @@ export function CustomerWorkspace({ customerId: id }) {
     )
   }
 
+  const tabCounts = {
+    programs: customer.programs?.length,
+    deals: customerDeals.length,
+    payments: paymentsCountData?.total,
+    tasks: tasksCountData?.total,
+    installations: installationsCountData?.total,
+  }
+  const sideTabs = BASE_SIDE_TABS.map((tab) =>
+    tabCounts[tab.id] != null ? { ...tab, label: `${tab.label} (${tabCounts[tab.id]})` } : tab
+  )
+
   return (
     <div className="customer-workspace">
       {header}
@@ -243,7 +260,7 @@ export function CustomerWorkspace({ customerId: id }) {
           <MessagesPanel customerId={id} variant="flush" />
         </div>
         <div className="customer-workspace__side">
-          <Tabs items={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
+          <Tabs items={sideTabs} activeId={sideTab} onChange={setSideTab} />
           <div className="customer-workspace__side-content">
             {sideTab === 'overview' && (
               <div className="stack">
@@ -307,7 +324,17 @@ export function CustomerWorkspace({ customerId: id }) {
               </div>
             )}
 
-            {sideTab === 'programs' && <ProgramsPanel customerId={id} programs={customer.programs || []} onChanged={refetch} />}
+            {sideTab === 'programs' && (
+              <ProgramsPanel
+                customerId={id}
+                programs={customer.programs || []}
+                employees={employees}
+                onChanged={() => {
+                  refetch()
+                  bump()
+                }}
+              />
+            )}
 
             {sideTab === 'leads' && (
               <RelatedList
