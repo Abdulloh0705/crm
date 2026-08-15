@@ -3,10 +3,12 @@ import { useAsync } from '../../hooks/useAsync'
 import { customersService } from '../../services/customers.service'
 
 const VIEW_STORAGE_KEY = 'bold-yechim-customers-view'
+const VALID_VIEWS = ['list', 'card', 'kanban']
 
 function loadStoredView() {
   try {
-    return localStorage.getItem(VIEW_STORAGE_KEY) === 'card' ? 'card' : 'list'
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY)
+    return VALID_VIEWS.includes(stored) ? stored : 'list'
   } catch {
     return 'list'
   }
@@ -19,6 +21,7 @@ export function useCustomers() {
     pageSize: 10,
     search: '',
     status: '',
+    stage: '',
     assignedEmployeeId: '',
     city: '',
     program: '',
@@ -29,14 +32,21 @@ export function useCustomers() {
     sort: '-createdAt',
   })
 
-  const { data, loading, error, refetch } = useAsync(
-    () => customersService.list(params),
+  // Kanban needs every customer on the board at once (grouped client-side
+  // by stage), not one paginated page — same pattern as useDeals's Kanban.
+  const listQuery = useAsync(
+    () => (view !== 'kanban' ? customersService.list(params) : Promise.resolve(null)),
     [
-      params.page, params.pageSize, params.search, params.status, params.assignedEmployeeId,
+      view, params.page, params.pageSize, params.search, params.status, params.stage, params.assignedEmployeeId,
       params.city, params.program, params.groupId, params.installationStatus,
       params.createdFrom, params.createdTo, params.sort,
     ]
   )
+  const kanbanQuery = useAsync(
+    () => (view === 'kanban' ? customersService.list({ ...params, page: 1, pageSize: 200 }) : Promise.resolve(null)),
+    [view, params.search, params.status, params.assignedEmployeeId, params.city, params.program, params.groupId, params.installationStatus, params.createdFrom, params.createdTo]
+  )
+  const active = view === 'kanban' ? kanbanQuery : listQuery
 
   const setView = useCallback((next) => {
     setViewState(next)
@@ -49,6 +59,7 @@ export function useCustomers() {
 
   const setSearch = useCallback((search) => setParams((p) => ({ ...p, search, page: 1 })), [])
   const setStatus = useCallback((status) => setParams((p) => ({ ...p, status, page: 1 })), [])
+  const setStage = useCallback((stage) => setParams((p) => ({ ...p, stage, page: 1 })), [])
   const setAssignedEmployeeId = useCallback((assignedEmployeeId) => setParams((p) => ({ ...p, assignedEmployeeId, page: 1 })), [])
   const setCity = useCallback((city) => setParams((p) => ({ ...p, city, page: 1 })), [])
   const setProgram = useCallback((program) => setParams((p) => ({ ...p, program, page: 1 })), [])
@@ -62,11 +73,12 @@ export function useCustomers() {
   return {
     view,
     setView,
-    customers: data?.items ?? [],
-    total: data?.total ?? 0,
+    customers: active.data?.items ?? [],
+    total: listQuery.data?.total ?? 0,
     params,
     setSearch,
     setStatus,
+    setStage,
     setAssignedEmployeeId,
     setCity,
     setProgram,
@@ -76,9 +88,9 @@ export function useCustomers() {
     setCreatedTo,
     setSort,
     setPage,
-    loading,
-    error,
-    refetch,
+    loading: active.loading,
+    error: active.error,
+    refetch: active.refetch,
   }
 }
 

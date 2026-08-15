@@ -217,6 +217,7 @@ function seed() {
     groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
+    stage: 'INSTALLING',
     createdAt: now(),
   }
   const customerSardor = {
@@ -240,6 +241,7 @@ function seed() {
     groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
+    stage: 'CONTACTED',
     createdAt: now(),
   }
   const customerJavohir = {
@@ -538,6 +540,7 @@ function migrateCustomers() {
     if (c.source === undefined) c.source = ''
     if (c.customFields === undefined) c.customFields = {}
     if (c.groupIds === undefined) c.groupIds = []
+    if (c.stage === undefined) c.stage = 'NEW'
     if (!Array.isArray(c.programs)) c.programs = []
     c.programs = c.programs.map((p) => {
       const program =
@@ -882,7 +885,7 @@ function registerResource(path, collection, { searchFields = ['name'], relationF
   }
   patch(`/${path}/:id`, ({ params, body }) => {
     const item = findOrThrow(collection, params.id, path)
-    Object.assign(item, body)
+    Object.assign(item, body, { updatedAt: now() })
     enrichReferences(item)
     persistDb()
     return item
@@ -915,6 +918,37 @@ function customerLastContactAt(customerId) {
   ].filter(Boolean)
   return dates.length ? dates.sort().at(-1) : null
 }
+// Bosqichning o'zi (customer.stage) faqat pipeline yorlig'i — buyurtma/
+// to'lov/o'rnatish holatini KO'RSATISH uchun esa mijozning eng so'nggi
+// savdosi/to'lovi/o'rnatishidan hosila qiymat kerak (ro'yxat ustunlari,
+// filter). Ikkalasi mustaqil: admin stage'ni istalgan vaqt qo'lda
+// o'zgartira oladi, hosila qiymatlar esa haqiqiy yozuvlarni aks ettiradi.
+function customerDeals(customerId) {
+  return db.deals.filter((d) => d.customer?.id === customerId)
+}
+// Kept in sync with features/customers/customers.constants.js's
+// CUSTOMER_STAGE_LABELS by hand — small, stable list, not worth importing
+// a frontend feature module into the API layer for.
+const STAGE_LABELS_FOR_SEARCH = {
+  NEW: 'Yangi',
+  CONTACTED: 'Gaplashildi',
+  ORDERED: 'Buyurtma olindi',
+  PAID: 'To‘lov qilindi',
+  INSTALLING: 'O‘rnatish',
+  DONE: 'Tugallandi',
+}
+function customerPaymentStatus(customerId) {
+  const dealIds = customerDeals(customerId).map((d) => d.id)
+  const payments = db.payments.filter((p) => dealIds.includes(p.dealId))
+  if (payments.length === 0) return null
+  return payments.some((p) => p.status === 'PAID') ? 'PAID' : payments.some((p) => p.status === 'PARTIAL') ? 'PARTIAL' : 'PENDING'
+}
+function customerInstallationStatus(customerId) {
+  const list = customerInstallations(customerId)
+  if (list.length === 0) return null
+  return list[list.length - 1].status
+}
+
 get('/customers', ({ query, user }) => {
   return paginate(db.customers, { ...query, __currentUserId: user.id }, {
     searchFields: ['name', 'phone', 'email', 'phone2', 'telegram'],
@@ -924,23 +958,57 @@ get('/customers', ({ query, user }) => {
       if (q.program && !customerProgramNames(item.id).includes(q.program)) return false
       if (q.groupId && !(item.groupIds || []).includes(q.groupId)) return false
       if (q.installationStatus && !customerInstallations(item.id).some((i) => i.status === q.installationStatus)) return false
+      if (q.stage && item.stage !== q.stage) return false
       if (q.createdFrom && item.createdAt < q.createdFrom) return false
       if (q.createdTo && item.createdAt > `${q.createdTo}T23:59:59.999Z`) return false
       return true
     },
     extraSearchText: (item) => {
       const businesses = customerBusinesses(item.id)
-      return [...businesses.map((b) => b.name), ...businesses.map((b) => b.city), ...customerProgramNames(item.id)].join(' ')
+      return [
+        ...businesses.map((b) => b.name),
+        ...businesses.map((b) => b.city),
+        ...customerProgramNames(item.id),
+        STAGE_LABELS_FOR_SEARCH[item.stage] || '',
+      ].join(' ')
     },
-    enrichFn: (item) => ({ ...item, lastContactAt: customerLastContactAt(item.id) }),
+    enrichFn: (item) => ({
+      ...item,
+      lastContactAt: customerLastContactAt(item.id),
+      paymentStatus: customerPaymentStatus(item.id),
+      installationStatus: customerInstallationStatus(item.id),
+    }),
   })
 })
-get('/meta/customer-options', () => ({
-  cities: [...new Set(db.businesses.map((b) => b.city).filter(Boolean))].sort(),
-  programs: [...new Set(db.customers.flatMap((c) => (c.programs || []).map((p) => p.name)))].sort(),
-}))
+get('/meta/customer-options', () => {
+  const stageCounts = {}
+  db.customers.forEach((c) => {
+    stageCounts[c.stage] = (stageCounts[c.stage] || 0) + 1
+  })
+  return {
+    cities: [...new Set(db.businesses.map((b) => b.city).filter(Boolean))].sort(),
+    programs: [...new Set(db.customers.flatMap((c) => (c.programs || []).map((p) => p.name)))].sort(),
+    stageCounts,
+  }
+})
+patch('/customers/:id/stage', ({ params, body }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  customer.stage = body.stage
+  persistDb()
+  return customer
+})
 
-registerResource('customers', db.customers, { searchFields: ['name', 'phone', 'email'] })
+// New customers must start on the pipeline (stage: 'NEW') — the generic
+// registerResource POST only defaults `status`, not this second, unrelated
+// status field, so a bespoke create (skipCreate on the resource below,
+// same shadowing pattern used elsewhere in this file) is needed here too.
+post('/customers', ({ body }) => {
+  const customer = enrichReferences({ id: uid(), status: body.status || 'active', stage: body.stage || 'NEW', createdAt: now(), ...body })
+  db.customers.push(customer)
+  persistDb()
+  return customer
+})
+registerResource('customers', db.customers, { searchFields: ['name', 'phone', 'email'], skipCreate: true })
 post('/customers/:id/deactivate', ({ params }) => {
   const customer = findOrThrow(db.customers, params.id, 'Mijoz')
   customer.status = customer.status === 'active' ? 'inactive' : 'active'
@@ -1092,6 +1160,19 @@ patch('/deals/:id/stage', ({ params, body }) => {
   persistDb()
   return deal
 })
+// Keeps deal.value in sync with the sum of its items whenever items exist —
+// so a deal built up via "+ Buyurtma" (no value set at creation) shows a
+// real total everywhere that reads deal.value (workspace summary tile,
+// PaymentForm's qolgan/remaining calc), not just inside DealItemsEditor's
+// own client-side sum.
+function syncDealValue(dealId) {
+  const deal = db.deals.find((d) => d.id === dealId)
+  const items = db.dealItems.filter((item) => item.dealId === dealId)
+  if (deal && items.length > 0) {
+    deal.value = items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+  }
+}
+
 get('/deals/:dealId/items', ({ params }) => {
   const items = db.dealItems.filter((item) => item.dealId === params.dealId)
   return { items, total: items.length }
@@ -1105,6 +1186,7 @@ post('/deals/:dealId/items', ({ params, body }) => {
     total: Math.max(0, Number(body.quantity || 0) * Number(body.unitPrice || 0) - Number(body.discount || 0)),
   }
   db.dealItems.push(item)
+  syncDealValue(params.dealId)
   persistDb()
   return item
 })
@@ -1112,6 +1194,7 @@ patch('/deals/:dealId/items/:itemId', ({ params, body }) => {
   const item = findOrThrow(db.dealItems, params.itemId, 'Mahsulot')
   Object.assign(item, body)
   item.total = Math.max(0, Number(item.quantity || 0) * Number(item.unitPrice || 0) - Number(item.discount || 0))
+  syncDealValue(params.dealId)
   persistDb()
   return item
 })
@@ -1119,6 +1202,7 @@ del('/deals/:dealId/items/:itemId', ({ params }) => {
   const index = db.dealItems.findIndex((i) => i.id === params.itemId)
   if (index === -1) throw new ApiError('Mahsulot topilmadi', { status: 404 })
   db.dealItems.splice(index, 1)
+  syncDealValue(params.dealId)
   persistDb()
   return null
 })
@@ -1288,11 +1372,17 @@ get('/timeline', ({ query }) => {
   const addDeal = (d) =>
     events.push({ id: `deal-${d.id}`, type: 'STAGE_CHANGED', date: d.createdAt, title: `${d.name} — ${d.stage}`, employeeName: d.salesEmployee?.name })
   const addQuotation = (q) => events.push({ id: `quote-${q.id}`, type: 'QUOTATION_CREATED', date: q.createdAt, title: `Taklifnoma #${q.number}` })
+  // `date`/`completedDate` are user-facing, date-only fields (no time-of-day),
+  // so they're kept for display, but ordering uses `sortDate` — the record's
+  // actual full createdAt/updatedAt timestamp — otherwise a same-day payment
+  // or install-completion sorts to midnight and jumps ahead of same-day
+  // events that DO carry a real time (e.g. "mijoz yaratildi").
   const addPayment = (p) =>
-    events.push({ id: `pay-${p.id}`, type: 'PAYMENT_RECEIVED', date: p.date || p.createdAt, title: `${p.amount} (${p.method})`, employeeName: p.employee?.name })
+    events.push({ id: `pay-${p.id}`, type: 'PAYMENT_RECEIVED', date: p.date || p.createdAt, sortDate: p.createdAt, title: `${p.amount} (${p.method})`, employeeName: p.employee?.name })
   const addInstallation = (i) => {
     events.push({ id: `inst-sched-${i.id}`, type: 'INSTALLATION_SCHEDULED', date: i.createdAt, title: i.address, employeeName: i.assignedEmployee?.name })
-    if (i.completedDate) events.push({ id: `inst-done-${i.id}`, type: 'INSTALLATION_COMPLETED', date: i.completedDate, title: i.address })
+    if (i.completedDate)
+      events.push({ id: `inst-done-${i.id}`, type: 'INSTALLATION_COMPLETED', date: i.completedDate, sortDate: i.updatedAt || i.completedDate, title: i.address })
   }
   const addActivity = (a) => events.push({ id: `act-${a.id}`, type: a.type, date: a.date, title: a.title, description: a.description, employeeName: a.employeeName })
   const addCompletedTask = (t) => {
@@ -1327,7 +1417,7 @@ get('/timeline', ({ query }) => {
     db.tasks.filter((t) => t.deal?.id === entityId).forEach(addCompletedTask)
   }
 
-  events.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+  events.sort((a, b) => new Date(a.sortDate || a.date || 0) - new Date(b.sortDate || b.date || 0))
   return { items: events }
 })
 

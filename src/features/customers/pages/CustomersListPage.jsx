@@ -8,8 +8,9 @@ import { CustomerTable } from '../components/CustomerTable'
 import { CustomerCard } from '../components/CustomerCard'
 import { CustomerForm } from '../components/CustomerForm'
 import { CustomerGroupsBar } from '../components/CustomerGroupsBar'
+import { CustomerStageBar } from '../components/CustomerStageBar'
 import { CustomerWorkspace } from '../components/CustomerWorkspace'
-import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS, CUSTOMER_STAGES, CUSTOMER_STAGE_LABELS } from '../customers.constants'
 import { INSTALLATION_STATUSES, INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { Button } from '../../../components/Button/Button'
 import { Input } from '../../../components/Input/Input'
@@ -19,6 +20,7 @@ import { EmptyState } from '../../../components/EmptyState/EmptyState'
 import { Alert } from '../../../components/Alert/Alert'
 import { Spinner } from '../../../components/Spinner/Spinner'
 import { Pagination } from '../../../components/Pagination/Pagination'
+import { KanbanBoard } from '../../../components/Kanban/KanbanBoard'
 import { PermissionGate } from '../../roles/PermissionGate'
 import { useConfirm } from '../../../store/ConfirmContext'
 import { useToast } from '../../../store/ToastContext'
@@ -26,6 +28,8 @@ import { useAction } from '../../../hooks/useAction'
 import { useDisclosure } from '../../../hooks/useDisclosure'
 import { InboxIcon, PlusIcon, SearchIcon } from '../../../components/icons/Icons'
 import { classNames } from '../../../utils/classNames'
+
+const STAGE_KANBAN_COLUMNS = CUSTOMER_STAGES.map((stage) => ({ id: stage, label: CUSTOMER_STAGE_LABELS[stage] }))
 
 export function CustomersListPage() {
   const { id: openCustomerId } = useParams()
@@ -38,6 +42,7 @@ export function CustomersListPage() {
     params,
     setSearch,
     setStatus,
+    setStage,
     setAssignedEmployeeId,
     setCity,
     setProgram,
@@ -53,7 +58,7 @@ export function CustomersListPage() {
   } = useCustomers()
   const { isOpen, open, close } = useDisclosure()
   const [employees, setEmployees] = useState([])
-  const [filterOptions, setFilterOptions] = useState({ cities: [], programs: [] })
+  const [filterOptions, setFilterOptions] = useState({ cities: [], programs: [], stageCounts: {} })
   const confirm = useConfirm()
   const toast = useToast()
 
@@ -65,16 +70,21 @@ export function CustomersListPage() {
     return customer
   })
   const deactivateAction = useAction((customer) => customersService.deactivate(customer.id))
+  const moveStageAction = useAction(({ id, stage }) => customersService.setStage(id, stage))
+
+  const loadFilterOptions = () => {
+    customersService
+      .getFilterOptions()
+      .then((res) => setFilterOptions({ cities: res?.cities ?? [], programs: res?.programs ?? [], stageCounts: res?.stageCounts ?? {} }))
+      .catch(() => setFilterOptions({ cities: [], programs: [], stageCounts: {} }))
+  }
 
   useEffect(() => {
     employeesService
       .list({ pageSize: 100 })
       .then((res) => setEmployees((res?.items ?? []).filter((e) => e.status === 'active')))
       .catch(() => setEmployees([]))
-    customersService
-      .getFilterOptions()
-      .then((res) => setFilterOptions({ cities: res?.cities ?? [], programs: res?.programs ?? [] }))
-      .catch(() => setFilterOptions({ cities: [], programs: [] }))
+    loadFilterOptions()
   }, [])
 
   const handleCreate = async (customerPayload, businessPayload) => {
@@ -83,13 +93,17 @@ export function CustomersListPage() {
       toast.success('Mijoz qo‘shildi')
       close()
       refetch()
+      loadFilterOptions()
     } catch (err) {
       toast.error(err.message || 'Mijoz qo‘shishda xatolik yuz berdi')
     }
   }
 
   const openWorkspace = (customerId) => navigate(`/admin/crm/customers/${customerId}`)
-  const closeWorkspace = () => navigate('/admin/crm/customers')
+  const closeWorkspace = () => {
+    navigate('/admin/crm/customers')
+    loadFilterOptions()
+  }
 
   const handleDeactivate = async (customer) => {
     const activating = customer.status !== 'active'
@@ -109,6 +123,17 @@ export function CustomersListPage() {
     }
   }
 
+  const handleStageMove = async (customer, fromStage, toStage) => {
+    try {
+      await moveStageAction.run({ id: customer.id, stage: toStage })
+      toast.success(`"${customer.name}" — ${toStage} bosqichiga ko‘chirildi`)
+      refetch()
+      loadFilterOptions()
+    } catch (err) {
+      toast.error(err.message || 'Bosqichni yangilashda xatolik yuz berdi')
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -124,6 +149,9 @@ export function CustomersListPage() {
             <button type="button" className={classNames('view-toggle__btn', view === 'list' && 'view-toggle__btn--active')} onClick={() => setView('list')}>
               Ro‘yxat
             </button>
+            <button type="button" className={classNames('view-toggle__btn', view === 'kanban' && 'view-toggle__btn--active')} onClick={() => setView('kanban')}>
+              Kanban
+            </button>
           </div>
           <PermissionGate permission="customers.create">
             <Button onClick={open}>
@@ -133,6 +161,7 @@ export function CustomersListPage() {
         </div>
       </div>
 
+      <CustomerStageBar activeStage={params.stage} stageCounts={filterOptions.stageCounts} onSelectStage={setStage} />
       <CustomerGroupsBar activeGroupId={params.groupId} onSelectGroup={setGroupId} />
 
       <div className="filters-row">
@@ -141,7 +170,7 @@ export function CustomersListPage() {
             <SearchIcon width={16} height={16} />
           </span>
           <Input
-            placeholder="Ism, telefon, email, biznes, shahar yoki dastur"
+            placeholder="Ism, telefon, email, biznes, shahar, dastur yoki status"
             value={params.search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -228,6 +257,16 @@ export function CustomersListPage() {
           </div>
           <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
         </>
+      )}
+
+      {!loading && !error && customers.length > 0 && view === 'kanban' && (
+        <KanbanBoard
+          columns={STAGE_KANBAN_COLUMNS}
+          items={customers}
+          getColumnId={(customer) => customer.stage}
+          renderCard={(customer) => <CustomerCard customer={customer} onOpen={openWorkspace} />}
+          onCardMove={handleStageMove}
+        />
       )}
 
       <Drawer open={isOpen} title="Mijoz qo‘shish" subtitle="Asosiy ma'lumotlarni kiriting, qolganini keyinroq to‘ldirishingiz mumkin." onClose={close}>

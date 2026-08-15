@@ -5,6 +5,29 @@ export const CUSTOMER_STATUS_LABELS = {
   inactive: 'Nofaol',
 }
 
+// Mijoz bilan ishlash jarayoni (Bitrix-style pipeline) — customer.status
+// (active/inactive) dan alohida: bu mijozning savdo jarayonidagi bosqichi,
+// u esa hisobning faollik holati.
+export const CUSTOMER_STAGES = ['NEW', 'CONTACTED', 'ORDERED', 'PAID', 'INSTALLING', 'DONE']
+
+export const CUSTOMER_STAGE_LABELS = {
+  NEW: 'Yangi',
+  CONTACTED: 'Gaplashildi',
+  ORDERED: 'Buyurtma olindi',
+  PAID: 'To‘lov qilindi',
+  INSTALLING: 'O‘rnatish',
+  DONE: 'Tugallandi',
+}
+
+export const CUSTOMER_STAGE_BADGE_VARIANTS = {
+  NEW: 'gray',
+  CONTACTED: 'info',
+  ORDERED: 'warning',
+  PAID: 'primary',
+  INSTALLING: 'warning',
+  DONE: 'success',
+}
+
 export const PROGRAM_STATUSES = ['NEW', 'INSTALLING', 'ACTIVE', 'SUSPENDED', 'EXPIRED']
 
 export const PROGRAM_STATUS_LABELS = {

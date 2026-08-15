@@ -1,6 +1,7 @@
 import { Avatar } from '../../../components/Avatar/Avatar'
 import { Badge } from '../../../components/Badge/Badge'
-import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { CUSTOMER_STAGE_LABELS, CUSTOMER_STAGE_BADGE_VARIANTS } from '../customers.constants'
+import { formatDate } from '../../../utils/formatDate'
 import './CustomerCard.scss'
 
 // onOpen (not a route navigate) — clicking a card opens the customer
@@ -32,11 +33,14 @@ export function CustomerCard({ customer, onOpen }) {
       {customer.business?.name && <div className="customer-card__business">{customer.business.name}</div>}
 
       <div className="customer-card__footer">
-        <span className="customer-card__assignee">Mas'ul: {customer.assignedEmployee?.name || '—'}</span>
-        <Badge variant={customer.status === 'active' ? 'success' : 'gray'}>
-          {CUSTOMER_STATUS_LABELS[customer.status] || customer.status}
+        <Badge variant={CUSTOMER_STAGE_BADGE_VARIANTS[customer.stage] || 'gray'}>
+          {CUSTOMER_STAGE_LABELS[customer.stage] || customer.stage}
         </Badge>
+        <span className="customer-card__assignee">Mas'ul: {customer.assignedEmployee?.name || '—'}</span>
       </div>
+      {customer.lastContactAt && (
+        <div className="customer-card__last-contact text-muted text-xs">Oxirgi aloqa: {formatDate(customer.lastContactAt)}</div>
+      )}
     </div>
   )
 }

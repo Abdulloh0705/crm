@@ -48,6 +48,16 @@
     flex-wrap: wrap;
   }
 
+  &__stage-trigger {
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: v.$radius-full;
+    transition: transform v.$transition-fast;
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
   &__body {
     flex: 1;
     min-height: 0;

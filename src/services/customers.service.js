@@ -28,6 +28,9 @@ export const customersService = {
   // Groups (guruhlar)
   setGroups: (id, groupIds) => httpClient.patch(CUSTOMERS.GROUPS_UPDATE(id), { groupIds }),
 
+  // Pipeline stage (Yangi -> Gaplashildi -> ... -> Tugallandi)
+  setStage: (id, stage) => httpClient.patch(CUSTOMERS.STAGE_UPDATE(id), { stage }),
+
   // Messages (Yozishmalar)
   getMessages: (id) => httpClient.get(MESSAGES.LIST, { params: { customerId: id } }),
   sendMessage: (id, text) => httpClient.post(MESSAGES.CREATE, { customerId: id, text }),

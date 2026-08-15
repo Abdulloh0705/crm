@@ -59,6 +59,7 @@ export const CUSTOMERS = {
   PROGRAMS: (id) => `/customers/${id}/programs`,
   PROGRAM_UPDATE: (id, programId) => `/customers/${id}/programs/${programId}`,
   GROUPS_UPDATE: (id) => `/customers/${id}/groups`,
+  STAGE_UPDATE: (id) => `/customers/${id}/stage`,
 }
 
 export const CUSTOMER_GROUPS = {

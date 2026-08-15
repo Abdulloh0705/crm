@@ -4,7 +4,9 @@ import { Dropdown, DropdownItem } from '../../../components/Dropdown/Dropdown'
 import { PermissionGate } from '../../roles/PermissionGate'
 import { formatDate } from '../../../utils/formatDate'
 import { MoreIcon } from '../../../components/icons/Icons'
-import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { CUSTOMER_STAGE_LABELS, CUSTOMER_STAGE_BADGE_VARIANTS } from '../customers.constants'
+import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_BADGE_VARIANTS } from '../../payments/payments.constants'
+import { INSTALLATION_STATUS_LABELS, INSTALLATION_STATUS_BADGE_VARIANTS } from '../../installations/installations.constants'
 
 // onOpen (not a route navigate) — clicking a row opens the customer
 // workspace as an overlay over this same list, Bitrix-style. "Tahrirlash"
@@ -12,12 +14,12 @@ import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
 // point here.
 export function CustomerTable({ customers, onDeactivate, onOpen }) {
   const columns = [
-    { key: 'name', header: 'Ism', render: (row) => <span className="table__cell-primary">{row.name}</span> },
+    { key: 'name', header: 'Mijoz', render: (row) => <span className="table__cell-primary">{row.name}</span> },
     { key: 'phone', header: 'Telefon', render: (row) => row.phone || '—' },
     { key: 'business', header: 'Biznes', render: (row) => row.business?.name || '—' },
     {
       key: 'programs',
-      header: 'Dasturlar',
+      header: 'Dastur',
       render: (row) =>
         (row.programs || []).length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -32,11 +34,33 @@ export function CustomerTable({ customers, onDeactivate, onOpen }) {
         ),
     },
     {
-      key: 'status',
-      header: 'Holat',
-      render: (row) => <Badge variant={row.status === 'active' ? 'success' : 'gray'}>{CUSTOMER_STATUS_LABELS[row.status] || row.status}</Badge>,
+      key: 'stage',
+      header: 'Status',
+      render: (row) => <Badge variant={CUSTOMER_STAGE_BADGE_VARIANTS[row.stage] || 'gray'}>{CUSTOMER_STAGE_LABELS[row.stage] || row.stage}</Badge>,
     },
-    { key: 'assignedEmployee', header: 'Mas’ul xodim', render: (row) => row.assignedEmployee?.name || '—' },
+    {
+      key: 'paymentStatus',
+      header: 'To‘lov',
+      render: (row) =>
+        row.paymentStatus ? (
+          <Badge variant={PAYMENT_STATUS_BADGE_VARIANTS[row.paymentStatus] || 'gray'}>{PAYMENT_STATUS_LABELS[row.paymentStatus] || row.paymentStatus}</Badge>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      key: 'installationStatus',
+      header: 'O‘rnatish',
+      render: (row) =>
+        row.installationStatus ? (
+          <Badge variant={INSTALLATION_STATUS_BADGE_VARIANTS[row.installationStatus] || 'gray'}>
+            {INSTALLATION_STATUS_LABELS[row.installationStatus] || row.installationStatus}
+          </Badge>
+        ) : (
+          '—'
+        ),
+    },
+    { key: 'assignedEmployee', header: 'Mas’ul', render: (row) => row.assignedEmployee?.name || '—' },
     { key: 'lastContactAt', header: 'Oxirgi aloqa', render: (row) => (row.lastContactAt ? formatDate(row.lastContactAt) : '—') },
     {
       key: 'actions',
