@@ -13,7 +13,6 @@ import { SettingsPage } from '../features/settings/pages/SettingsPage'
 import { ProfilePage } from '../features/profile/pages/ProfilePage'
 import { MyWorkPage } from '../features/myWork/pages/MyWorkPage'
 import { CustomersListPage } from '../features/customers/pages/CustomersListPage'
-import { CustomerDetailPage } from '../features/customers/pages/CustomerDetailPage'
 import { BusinessesListPage } from '../features/businesses/pages/BusinessesListPage'
 import { BusinessDetailPage } from '../features/businesses/pages/BusinessDetailPage'
 import { LeadsListPage } from '../features/leads/pages/LeadsListPage'
@@ -82,6 +81,11 @@ export function AppRoutes() {
 
           {/* CRM business flow: Customer -> Business -> Lead -> Deal ->
               Deal Items -> Quotation -> Payment -> Installation -> Activity/Task */}
+          {/* Bitrix-style: the customer workspace is an overlay on top of
+              this same list (see CustomerWorkspace), not a separate route
+              component — crm/customers/:id renders the identical list page,
+              which reads the :id param itself and opens the workspace
+              drawer over it. */}
           <Route
             path="crm/customers"
             element={
@@ -90,7 +94,14 @@ export function AppRoutes() {
               </RequirePermission>
             }
           />
-          <Route path="crm/customers/:id" element={<CustomerDetailPage />} />
+          <Route
+            path="crm/customers/:id"
+            element={
+              <RequirePermission permission="customers.view">
+                <CustomersListPage />
+              </RequirePermission>
+            }
+          />
 
           <Route
             path="crm/businesses"

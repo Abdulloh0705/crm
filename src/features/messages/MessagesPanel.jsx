@@ -7,7 +7,7 @@ import { Spinner } from '../../components/Spinner/Spinner'
 import { Alert } from '../../components/Alert/Alert'
 import { EmptyState } from '../../components/EmptyState/EmptyState'
 import { Button } from '../../components/Button/Button'
-import { InboxIcon } from '../../components/icons/Icons'
+import { InboxIcon, PlusIcon } from '../../components/icons/Icons'
 import { classNames } from '../../utils/classNames'
 import { formatDateTime } from '../../utils/formatDate'
 import './MessagesPanel.scss'
@@ -15,7 +15,10 @@ import './MessagesPanel.scss'
 // Frontend-only demo conversation (see api/demoEngine.js's `messages`
 // resource) — same entityId convention as comments/attachments, so wiring a
 // real messenger backend later means swapping the service call, not this UI.
-export function MessagesPanel({ customerId }) {
+// variant="flush" drops the Card chrome/title and fills its parent's height
+// with a sticky composer — used as the Customer Workspace's main column,
+// where chat has to be visible immediately, not one click away.
+export function MessagesPanel({ customerId, variant = 'card' }) {
   const { data, loading, error, refetch } = useAsync(() => customersService.getMessages(customerId), [customerId])
   const [text, setText] = useState('')
   const sendAction = useAction((value) => customersService.sendMessage(customerId, value))
@@ -35,8 +38,8 @@ export function MessagesPanel({ customerId }) {
     }
   }
 
-  return (
-    <Card title="Yozishmalar">
+  const body = (
+    <>
       {error && (
         <Alert variant="danger" title="Yozishmalarni yuklab bo‘lmadi">
           {error.message}
@@ -67,18 +70,37 @@ export function MessagesPanel({ customerId }) {
           ))}
         </div>
       )}
-      <form className="messages-panel__composer" onSubmit={handleSend}>
-        <input
-          className="messages-panel__input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Xabar yozing..."
-          disabled={sendAction.loading}
-        />
-        <Button type="submit" loading={sendAction.loading} disabled={!text.trim()}>
-          Yuborish
-        </Button>
-      </form>
+    </>
+  )
+
+  const composer = (
+    <form className="messages-panel__composer" onSubmit={handleSend}>
+      <input
+        className="messages-panel__input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Xabar yozing..."
+        disabled={sendAction.loading}
+      />
+      <Button type="submit" loading={sendAction.loading} disabled={!text.trim()}>
+        {variant === 'flush' ? <PlusIcon width={16} height={16} /> : 'Yuborish'}
+      </Button>
+    </form>
+  )
+
+  if (variant === 'flush') {
+    return (
+      <div className="messages-panel messages-panel--flush">
+        <div className="messages-panel__scroll">{body}</div>
+        {composer}
+      </div>
+    )
+  }
+
+  return (
+    <Card title="Yozishmalar">
+      {body}
+      {composer}
     </Card>
   )
 }

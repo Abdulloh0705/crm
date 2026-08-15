@@ -1,15 +1,16 @@
-import { useNavigate } from 'react-router-dom'
 import { Avatar } from '../../../components/Avatar/Avatar'
 import { Badge } from '../../../components/Badge/Badge'
 import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
 import './CustomerCard.scss'
 
-export function CustomerCard({ customer }) {
-  const navigate = useNavigate()
+// onOpen (not a route navigate) — clicking a card opens the customer
+// workspace as an overlay over this same list, Bitrix-style, rather than
+// replacing the page.
+export function CustomerCard({ customer, onOpen }) {
   const programs = customer.programs || []
 
   return (
-    <div className="customer-card" onClick={() => navigate(`/admin/crm/customers/${customer.id}`)}>
+    <div className="customer-card" onClick={() => onOpen(customer.id)}>
       <div className="customer-card__top">
         <Avatar name={customer.name} size="lg" />
         <div className="customer-card__identity">

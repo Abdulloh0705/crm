@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { Table } from '../../../components/Table/Table'
 import { Badge } from '../../../components/Badge/Badge'
 import { Dropdown, DropdownItem } from '../../../components/Dropdown/Dropdown'
@@ -7,9 +6,11 @@ import { formatDate } from '../../../utils/formatDate'
 import { MoreIcon } from '../../../components/icons/Icons'
 import { CUSTOMER_STATUS_LABELS } from '../customers.constants'
 
-export function CustomerTable({ customers, onDeactivate }) {
-  const navigate = useNavigate()
-
+// onOpen (not a route navigate) — clicking a row opens the customer
+// workspace as an overlay over this same list, Bitrix-style. "Tahrirlash"
+// lives inside the workspace itself once it's open, not as a separate entry
+// point here.
+export function CustomerTable({ customers, onDeactivate, onOpen }) {
   const columns = [
     { key: 'name', header: 'Ism', render: (row) => <span className="table__cell-primary">{row.name}</span> },
     { key: 'phone', header: 'Telefon', render: (row) => row.phone || '—' },
@@ -50,10 +51,7 @@ export function CustomerTable({ customers, onDeactivate }) {
               </button>
             )}
           >
-            <DropdownItem onClick={() => navigate(`/admin/crm/customers/${row.id}`)}>Ko‘rish</DropdownItem>
-            <PermissionGate permission="customers.edit">
-              <DropdownItem onClick={() => navigate(`/admin/crm/customers/${row.id}?edit=1`)}>Tahrirlash</DropdownItem>
-            </PermissionGate>
+            <DropdownItem onClick={() => onOpen(row.id)}>Ko‘rish</DropdownItem>
             <PermissionGate permission="customers.delete">
               <DropdownItem danger onClick={() => onDeactivate(row)}>
                 {row.status === 'active' ? 'Faolsizlantirish' : 'Faollashtirish'}
@@ -65,5 +63,5 @@ export function CustomerTable({ customers, onDeactivate }) {
     },
   ]
 
-  return <Table columns={columns} data={customers} onRowClick={(row) => navigate(`/admin/crm/customers/${row.id}`)} />
+  return <Table columns={columns} data={customers} onRowClick={(row) => onOpen(row.id)} />
 }

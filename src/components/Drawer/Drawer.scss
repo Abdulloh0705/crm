@@ -24,6 +24,10 @@
   z-index: v.$z-modal;
   animation: drawer-in v.$transition-slow;
 
+  &--xl {
+    max-width: 1180px;
+  }
+
   &__header {
     @include m.flex(flex-start, space-between);
     padding: v.$space-5 v.$space-6;
@@ -61,6 +65,12 @@
     flex: 1;
     position: relative;
     @include m.custom-scrollbar;
+
+    &--flush {
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+    }
   }
 
   &__footer {

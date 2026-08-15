@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { Table } from '../../../components/Table/Table'
 import { TaskPriorityBadge, TaskStatusBadge } from './TaskBadges'
 import { formatDate } from '../../../utils/formatDate'
@@ -11,6 +12,8 @@ function relatedLabel(row) {
 }
 
 export function TaskTable({ tasks }) {
+  const navigate = useNavigate()
+
   const columns = [
     { key: 'title', header: 'Sarlavha', render: (row) => <span className="table__cell-primary">{row.title}</span> },
     { key: 'assignedEmployee', header: 'Mas’ul xodim', render: (row) => row.assignedEmployee?.name || '—' },
@@ -20,5 +23,6 @@ export function TaskTable({ tasks }) {
     { key: 'status', header: 'Holat', render: (row) => <TaskStatusBadge status={row.status} /> },
   ]
 
-  return <Table columns={columns} data={tasks} />
+  // Vazifani bosganda bog'langan mijozga o'tish (mijoz ish oynasi ochiladi).
+  return <Table columns={columns} data={tasks} onRowClick={(row) => row.customer?.id && navigate(`/admin/crm/customers/${row.customer.id}`)} />
 }

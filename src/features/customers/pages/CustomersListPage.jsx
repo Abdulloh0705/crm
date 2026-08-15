@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCustomers } from '../customers.hooks'
 import { customersService } from '../../../services/customers.service'
 import { businessesService } from '../../../services/businesses.service'
@@ -7,6 +8,7 @@ import { CustomerTable } from '../components/CustomerTable'
 import { CustomerCard } from '../components/CustomerCard'
 import { CustomerForm } from '../components/CustomerForm'
 import { CustomerGroupsBar } from '../components/CustomerGroupsBar'
+import { CustomerWorkspace } from '../components/CustomerWorkspace'
 import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
 import { INSTALLATION_STATUSES, INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { Button } from '../../../components/Button/Button'
@@ -26,6 +28,8 @@ import { InboxIcon, PlusIcon, SearchIcon } from '../../../components/icons/Icons
 import { classNames } from '../../../utils/classNames'
 
 export function CustomersListPage() {
+  const { id: openCustomerId } = useParams()
+  const navigate = useNavigate()
   const {
     view,
     setView,
@@ -83,6 +87,9 @@ export function CustomersListPage() {
       toast.error(err.message || 'Mijoz qo‘shishda xatolik yuz berdi')
     }
   }
+
+  const openWorkspace = (customerId) => navigate(`/admin/crm/customers/${customerId}`)
+  const closeWorkspace = () => navigate('/admin/crm/customers')
 
   const handleDeactivate = async (customer) => {
     const activating = customer.status !== 'active'
@@ -207,7 +214,7 @@ export function CustomersListPage() {
 
       {!loading && !error && customers.length > 0 && view === 'list' && (
         <>
-          <CustomerTable customers={customers} onDeactivate={handleDeactivate} />
+          <CustomerTable customers={customers} onDeactivate={handleDeactivate} onOpen={openWorkspace} />
           <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
         </>
       )}
@@ -216,7 +223,7 @@ export function CustomersListPage() {
         <>
           <div className="customer-card-grid">
             {customers.map((customer) => (
-              <CustomerCard key={customer.id} customer={customer} />
+              <CustomerCard key={customer.id} customer={customer} onOpen={openWorkspace} />
             ))}
           </div>
           <Pagination page={params.page} pageSize={params.pageSize} total={total} onPageChange={setPage} />
@@ -225,6 +232,10 @@ export function CustomersListPage() {
 
       <Drawer open={isOpen} title="Mijoz qo‘shish" subtitle="Asosiy ma'lumotlarni kiriting, qolganini keyinroq to‘ldirishingiz mumkin." onClose={close}>
         <CustomerForm employees={employees} submitLabel="Qo‘shish" loading={createAction.loading} onSubmit={handleCreate} onCancel={close} />
+      </Drawer>
+
+      <Drawer open={!!openCustomerId} size="xl" noBodyPadding onClose={closeWorkspace}>
+        {openCustomerId && <CustomerWorkspace key={openCustomerId} customerId={openCustomerId} />}
       </Drawer>
     </div>
   )
