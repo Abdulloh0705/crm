@@ -56,6 +56,30 @@ export const CUSTOMERS = {
   // Distinct filter option sets (city, dastur/program) for the customer hub's
   // filter row — cheap to compute from existing records, no separate catalog.
   FILTER_OPTIONS: '/meta/customer-options',
+  PROGRAMS: (id) => `/customers/${id}/programs`,
+  PROGRAM_UPDATE: (id, programId) => `/customers/${id}/programs/${programId}`,
+  GROUPS_UPDATE: (id) => `/customers/${id}/groups`,
+}
+
+export const CUSTOMER_GROUPS = {
+  LIST: '/customer-groups',
+  DETAIL: (id) => `/customer-groups/${id}`,
+  CREATE: '/customer-groups',
+  UPDATE: (id) => `/customer-groups/${id}`,
+  DELETE: (id) => `/customer-groups/${id}`,
+}
+
+export const CUSTOMER_FIELD_DEFS = {
+  LIST: '/customer-field-defs',
+  DETAIL: (id) => `/customer-field-defs/${id}`,
+  CREATE: '/customer-field-defs',
+  UPDATE: (id) => `/customer-field-defs/${id}`,
+  DELETE: (id) => `/customer-field-defs/${id}`,
+}
+
+export const MESSAGES = {
+  LIST: '/messages',
+  CREATE: '/messages',
 }
 
 export const BUSINESSES = {

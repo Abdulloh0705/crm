@@ -1,5 +1,5 @@
 import { httpClient } from '../api/httpClient'
-import { CUSTOMERS, BUSINESSES, LEADS, DEALS, PAYMENTS, INSTALLATIONS, ACTIVITIES, TASKS } from '../api/endpoints'
+import { CUSTOMERS, CUSTOMER_GROUPS, CUSTOMER_FIELD_DEFS, MESSAGES, BUSINESSES, LEADS, DEALS, PAYMENTS, INSTALLATIONS, ACTIVITIES, TASKS } from '../api/endpoints'
 
 export const customersService = {
   list: (params) => httpClient.get(CUSTOMERS.LIST, { params }),
@@ -18,4 +18,31 @@ export const customersService = {
   getInstallations: (id) => httpClient.get(INSTALLATIONS.LIST, { params: { customerId: id } }),
   getActivities: (id) => httpClient.get(ACTIVITIES.LIST, { params: { customerId: id } }),
   getTasks: (id) => httpClient.get(TASKS.LIST, { params: { customerId: id } }),
+
+  // Programs (Dasturlar)
+  getPrograms: (id) => httpClient.get(CUSTOMERS.PROGRAMS(id)),
+  addProgram: (id, payload) => httpClient.post(CUSTOMERS.PROGRAMS(id), payload),
+  updateProgram: (id, programId, payload) => httpClient.patch(CUSTOMERS.PROGRAM_UPDATE(id, programId), payload),
+  removeProgram: (id, programId) => httpClient.delete(CUSTOMERS.PROGRAM_UPDATE(id, programId)),
+
+  // Groups (guruhlar)
+  setGroups: (id, groupIds) => httpClient.patch(CUSTOMERS.GROUPS_UPDATE(id), { groupIds }),
+
+  // Messages (Yozishmalar)
+  getMessages: (id) => httpClient.get(MESSAGES.LIST, { params: { customerId: id } }),
+  sendMessage: (id, text) => httpClient.post(MESSAGES.CREATE, { customerId: id, text }),
+}
+
+export const customerGroupsService = {
+  list: (params) => httpClient.get(CUSTOMER_GROUPS.LIST, { params }),
+  create: (payload) => httpClient.post(CUSTOMER_GROUPS.CREATE, payload),
+  update: (id, payload) => httpClient.patch(CUSTOMER_GROUPS.UPDATE(id), payload),
+  remove: (id) => httpClient.delete(CUSTOMER_GROUPS.DELETE(id)),
+}
+
+export const customerFieldDefsService = {
+  list: (params) => httpClient.get(CUSTOMER_FIELD_DEFS.LIST, { params }),
+  create: (payload) => httpClient.post(CUSTOMER_FIELD_DEFS.CREATE, payload),
+  update: (id, payload) => httpClient.patch(CUSTOMER_FIELD_DEFS.UPDATE(id), payload),
+  remove: (id) => httpClient.delete(CUSTOMER_FIELD_DEFS.DELETE(id)),
 }

@@ -1,0 +1,65 @@
+@use '../../styles/abstracts/variables' as v;
+@use '../../styles/abstracts/mixins' as m;
+
+.messages-panel {
+  &__thread {
+    display: flex;
+    flex-direction: column;
+    gap: v.$space-3;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: v.$space-1;
+    margin-bottom: v.$space-4;
+    @include m.custom-scrollbar;
+  }
+
+  &__bubble-row {
+    display: flex;
+    justify-content: flex-start;
+
+    &--me {
+      justify-content: flex-end;
+    }
+  }
+
+  &__bubble {
+    max-width: 72%;
+    padding: v.$space-2 v.$space-3;
+    border-radius: v.$radius-lg;
+    background: v.$color-gray-100;
+  }
+
+  &__bubble-row--me &__bubble {
+    background: v.$color-primary-100;
+  }
+
+  &__bubble-text {
+    font-size: v.$font-size-sm;
+    color: v.$color-text-primary;
+    white-space: pre-wrap;
+  }
+
+  &__bubble-meta {
+    margin-top: 4px;
+    font-size: v.$font-size-xs;
+    color: v.$color-text-muted;
+  }
+
+  &__composer {
+    display: flex;
+    gap: v.$space-2;
+  }
+
+  &__input {
+    flex: 1;
+    padding: v.$space-2 v.$space-3;
+    border-radius: v.$radius-md;
+    border: 1px solid v.$color-border;
+    font-size: v.$font-size-sm;
+    background: v.$color-bg-surface;
+
+    &:focus {
+      @include m.focus-ring;
+    }
+  }
+}

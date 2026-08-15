@@ -142,3 +142,15 @@ export const RefreshIcon = (props) => (
     <path d="M3 21v-5h5" />
   </svg>
 )
+
+export const PhoneIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L14 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 6a2 2 0 0 1 2-2Z" />
+  </svg>
+)
+
+export const MessageIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z" />
+  </svg>
+)

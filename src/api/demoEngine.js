@@ -71,6 +71,9 @@ const db = {
   users: [],
   teams: [],
   customers: [],
+  customerGroups: [],
+  customerFieldDefs: [],
+  messages: [],
   businesses: [],
   leads: [],
   deals: [],
@@ -192,13 +195,25 @@ function seed() {
     { id: uid(), name: 'INSTALLER', permissions: installer.permissions }
   )
 
+  const programCreatedAt = now()
   const customerAli = {
     id: uid(),
     name: 'Ali Valiyev',
     phone: '+998901234500',
+    phone2: '',
+    telegram: '@ali_valiyev',
     email: 'ali.valiyev@example.com',
+    address: { country: 'O‘zbekiston', region: 'Toshkent', city: 'Toshkent', district: 'Yunusobod', street: 'Amir Temur ko‘chasi', house: '12', extra: '' },
+    birthDate: '',
     notes: 'VIP mijoz',
-    programs: ['Bito POS'],
+    telegramUsername: 'ali_valiyev',
+    instagram: '',
+    source: 'REFERRAL',
+    customFields: {},
+    programs: [
+      { id: uid(), name: 'Bito POS', version: '2.4', startDate: '2026-08-01', installedDate: '2026-08-05', status: 'ACTIVE', subscriptionUntil: '2027-08-05', notes: '', createdAt: programCreatedAt },
+    ],
+    groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
     createdAt: now(),
@@ -207,9 +222,21 @@ function seed() {
     id: uid(),
     name: 'Sardor Rahimov',
     phone: '+998907654321',
+    phone2: '',
+    telegram: '',
     email: 'sardor.rahimov@example.com',
+    address: { country: 'O‘zbekiston', region: 'Toshkent', city: 'Toshkent', district: 'Chilonzor', street: '', house: '', extra: '' },
+    birthDate: '',
     notes: '',
-    programs: ['Bito POS', 'Bito Kassa'],
+    telegramUsername: '',
+    instagram: '',
+    source: 'TELEGRAM',
+    customFields: {},
+    programs: [
+      { id: uid(), name: 'Bito POS', version: '2.4', startDate: '2026-07-10', installedDate: '2026-07-12', status: 'ACTIVE', subscriptionUntil: '2027-07-12', notes: '', createdAt: programCreatedAt },
+      { id: uid(), name: 'Bito Kassa', version: '1.2', startDate: '2026-07-10', installedDate: '', status: 'PENDING', subscriptionUntil: '', notes: 'O‘rnatish kutilmoqda', createdAt: programCreatedAt },
+    ],
+    groupIds: [],
     assignedEmployee: { id: sales.id, name: sales.name },
     status: 'active',
     createdAt: now(),
@@ -218,14 +245,48 @@ function seed() {
     id: uid(),
     name: 'Javohir Tosheva',
     phone: '+998909998877',
+    phone2: '',
+    telegram: '',
     email: 'javohir.t@example.com',
+    address: { country: 'O‘zbekiston', region: 'Samarqand', city: 'Samarqand', district: '', street: '', house: '', extra: '' },
+    birthDate: '',
     notes: '',
-    programs: ['Bito Kassa'],
+    telegramUsername: '',
+    instagram: '',
+    source: 'INSTAGRAM',
+    customFields: {},
+    programs: [
+      { id: uid(), name: 'Bito Kassa', version: '1.2', startDate: '2026-06-01', installedDate: '2026-06-03', status: 'ACTIVE', subscriptionUntil: '2027-06-03', notes: '', createdAt: programCreatedAt },
+    ],
+    groupIds: [],
     assignedEmployee: { id: manager.id, name: manager.name },
     status: 'active',
     createdAt: now(),
   }
   db.customers.push(customerAli, customerSardor, customerJavohir)
+
+  db.customerGroups.push(
+    { id: uid(), name: 'VIP mijozlar', createdAt: now() },
+    { id: uid(), name: 'Bito mijozlari', createdAt: now() }
+  )
+  customerAli.groupIds = [db.customerGroups[0].id, db.customerGroups[1].id]
+  customerSardor.groupIds = [db.customerGroups[1].id]
+  customerJavohir.groupIds = [db.customerGroups[1].id]
+
+  db.customerFieldDefs.push({
+    id: uid(),
+    label: 'Qurilmalar soni',
+    type: 'NUMBER',
+    options: [],
+    createdAt: now(),
+  })
+
+  db.messages.push(
+    { id: uid(), customerId: customerAli.id, senderType: 'employee', senderName: sales.name, text: 'Assalomu alaykum, Ali aka! Bito POS o‘rnatish bo‘yicha bog‘lanmoqchi edim.', createdAt: now() },
+    { id: uid(), customerId: customerAli.id, senderType: 'customer', senderName: customerAli.name, text: 'Vaalaykum assalom, albatta, qachon kelasiz?', createdAt: now() },
+    { id: uid(), customerId: customerAli.id, senderType: 'employee', senderName: sales.name, text: 'Ertaga soat 14:00 da boramiz, mos keladimi?', createdAt: now() },
+    { id: uid(), customerId: customerAli.id, senderType: 'customer', senderName: customerAli.name, text: 'Ha, mos keladi. Kutamiz.', createdAt: now() }
+  )
 
   const businessAli = {
     id: uid(),
@@ -448,6 +509,30 @@ function seed() {
   })
 }
 
+// Upgrades customer records saved by an older version of this engine (flat
+// `programs: string[]`, no address/phone2/telegram/customFields/groupIds) to
+// the current shape — runs unconditionally so it's a no-op on already-fresh
+// data and safe to re-run every load.
+function migrateCustomers() {
+  db.customers.forEach((c) => {
+    if (!c.address) c.address = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '' }
+    if (c.phone2 === undefined) c.phone2 = ''
+    if (c.telegram === undefined) c.telegram = ''
+    if (c.birthDate === undefined) c.birthDate = ''
+    if (c.telegramUsername === undefined) c.telegramUsername = ''
+    if (c.instagram === undefined) c.instagram = ''
+    if (c.source === undefined) c.source = ''
+    if (c.customFields === undefined) c.customFields = {}
+    if (c.groupIds === undefined) c.groupIds = []
+    if (!Array.isArray(c.programs)) c.programs = []
+    c.programs = c.programs.map((p) =>
+      typeof p === 'string'
+        ? { id: uid(), name: p, version: '', startDate: '', installedDate: '', status: 'ACTIVE', subscriptionUntil: '', notes: '', createdAt: c.createdAt || now() }
+        : p
+    )
+  })
+}
+
 const persisted = loadPersistedDb()
 if (persisted) {
   Object.assign(db, persisted)
@@ -455,6 +540,7 @@ if (persisted) {
   seed()
   persistDb()
 }
+migrateCustomers()
 
 // ---------------------------------------------------------------------------
 // Session (localStorage-backed, mirrors a cookie-based session for demo
@@ -582,6 +668,14 @@ function enrichReferences(item) {
     const d = db.deals.find((x) => x.id === item.dealId)
     if (d) item.deal = { id: d.id, name: d.name, customer: d.customer, business: d.business }
   }
+  // A record created from a deal (e.g. an Installation) only ever gets sent
+  // dealId, never customerId/businessId directly — without this, it's
+  // findable by dealId but invisible to customersService.getInstallations()/
+  // businessesService.getInstallations() (relationFields match on
+  // item.customer?.id / item.business?.id), which is exactly the "why isn't
+  // the installation I just created showing up on the Customer page" bug.
+  if (!item.customer && item.deal?.customer) item.customer = item.deal.customer
+  if (!item.business && item.deal?.business) item.business = item.deal.business
   if (item.leadId && !item.lead) {
     const l = db.leads.find((x) => x.id === item.leadId)
     if (l) item.lead = { id: l.id, title: l.title }
@@ -786,28 +880,46 @@ function registerResource(path, collection, { searchFields = ['name'], relationF
 function customerBusinesses(customerId) {
   return db.businesses.filter((b) => b.customer?.id === customerId)
 }
-function customerPrograms(customerId) {
-  const list = db.customers.find((c) => c.id === customerId)?.programs
-  return Array.isArray(list) ? list : []
+function customerProgramNames(customerId) {
+  const c = db.customers.find((x) => x.id === customerId)
+  return Array.isArray(c?.programs) ? c.programs.map((p) => p.name) : []
+}
+function customerInstallations(customerId) {
+  return db.installations.filter((i) => i.customer?.id === customerId)
+}
+// "Oxirgi aloqa" — most recent activity or message timestamp for this
+// customer, used as a list-view column, not stored on the customer record
+// itself (always derived, so it can't go stale independently).
+function customerLastContactAt(customerId) {
+  const dates = [
+    ...db.activities.filter((a) => a.customerId === customerId).map((a) => a.date || a.createdAt),
+    ...db.messages.filter((m) => m.customerId === customerId).map((m) => m.createdAt),
+  ].filter(Boolean)
+  return dates.length ? dates.sort().at(-1) : null
 }
 get('/customers', ({ query, user }) => {
   return paginate(db.customers, { ...query, __currentUserId: user.id }, {
-    searchFields: ['name', 'phone', 'email'],
+    searchFields: ['name', 'phone', 'email', 'phone2', 'telegram'],
     relationFields: ['assignedEmployeeId'],
     filterFn: (item, q) => {
       if (q.city && !customerBusinesses(item.id).some((b) => b.city === q.city)) return false
-      if (q.program && !customerPrograms(item.id).includes(q.program)) return false
+      if (q.program && !customerProgramNames(item.id).includes(q.program)) return false
+      if (q.groupId && !(item.groupIds || []).includes(q.groupId)) return false
+      if (q.installationStatus && !customerInstallations(item.id).some((i) => i.status === q.installationStatus)) return false
+      if (q.createdFrom && item.createdAt < q.createdFrom) return false
+      if (q.createdTo && item.createdAt > `${q.createdTo}T23:59:59.999Z`) return false
       return true
     },
     extraSearchText: (item) => {
       const businesses = customerBusinesses(item.id)
-      return [...businesses.map((b) => b.name), ...businesses.map((b) => b.city), ...customerPrograms(item.id)].join(' ')
+      return [...businesses.map((b) => b.name), ...businesses.map((b) => b.city), ...customerProgramNames(item.id)].join(' ')
     },
+    enrichFn: (item) => ({ ...item, lastContactAt: customerLastContactAt(item.id) }),
   })
 })
 get('/meta/customer-options', () => ({
   cities: [...new Set(db.businesses.map((b) => b.city).filter(Boolean))].sort(),
-  programs: [...new Set(db.customers.flatMap((c) => c.programs || []))].sort(),
+  programs: [...new Set(db.customers.flatMap((c) => (c.programs || []).map((p) => p.name)))].sort(),
 }))
 
 registerResource('customers', db.customers, { searchFields: ['name', 'phone', 'email'] })
@@ -816,6 +928,86 @@ post('/customers/:id/deactivate', ({ params }) => {
   customer.status = customer.status === 'active' ? 'inactive' : 'active'
   persistDb()
   return customer
+})
+
+// ---------------------------------------------------------------------------
+// Customer programs (Dasturlar) — structured sub-records, not just names, so
+// version/dates/status/subscription/notes can be tracked per install.
+// ---------------------------------------------------------------------------
+get('/customers/:id/programs', ({ params }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  return { items: customer.programs || [], total: (customer.programs || []).length }
+})
+post('/customers/:id/programs', ({ params, body }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  const program = { id: uid(), version: '', startDate: '', installedDate: '', status: 'ACTIVE', subscriptionUntil: '', notes: '', ...body, createdAt: now() }
+  customer.programs = [...(customer.programs || []), program]
+  persistDb()
+  return program
+})
+patch('/customers/:id/programs/:programId', ({ params, body }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  const program = (customer.programs || []).find((p) => p.id === params.programId)
+  if (!program) throw new ApiError('Dastur topilmadi', { status: 404 })
+  Object.assign(program, body)
+  persistDb()
+  return program
+})
+del('/customers/:id/programs/:programId', ({ params }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  customer.programs = (customer.programs || []).filter((p) => p.id !== params.programId)
+  persistDb()
+  return null
+})
+
+// ---------------------------------------------------------------------------
+// Customer groups (papka-style tags, many-to-many via customer.groupIds)
+// ---------------------------------------------------------------------------
+registerResource('customer-groups', db.customerGroups, { searchFields: ['name'] })
+del('/customer-groups/:id', ({ params }) => {
+  const index = db.customerGroups.findIndex((g) => g.id === params.id)
+  if (index === -1) throw new ApiError('Guruh topilmadi', { status: 404 })
+  db.customerGroups.splice(index, 1)
+  db.customers.forEach((c) => {
+    if (c.groupIds?.includes(params.id)) c.groupIds = c.groupIds.filter((id) => id !== params.id)
+  })
+  persistDb()
+  return null
+})
+patch('/customers/:id/groups', ({ params, body }) => {
+  const customer = findOrThrow(db.customers, params.id, 'Mijoz')
+  customer.groupIds = Array.isArray(body.groupIds) ? body.groupIds : customer.groupIds
+  persistDb()
+  return customer
+})
+
+// ---------------------------------------------------------------------------
+// Customer field definitions (admin-defined custom fields) — Sozlamalar →
+// "Mijoz maydonlari". Values live on customer.customFields[fieldDefId].
+// ---------------------------------------------------------------------------
+registerResource('customer-field-defs', db.customerFieldDefs, { searchFields: ['label'] })
+del('/customer-field-defs/:id', ({ params }) => {
+  const index = db.customerFieldDefs.findIndex((f) => f.id === params.id)
+  if (index === -1) throw new ApiError('Maydon topilmadi', { status: 404 })
+  db.customerFieldDefs.splice(index, 1)
+  persistDb()
+  return null
+})
+
+// ---------------------------------------------------------------------------
+// Messages (Yozishmalar) — frontend demo conversation, same entityId
+// convention as comments/attachments so a real messenger backend is a
+// drop-in swap later.
+// ---------------------------------------------------------------------------
+get('/messages', ({ query }) => {
+  const items = db.messages.filter((m) => m.customerId === query.customerId).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+  return { items, total: items.length }
+})
+post('/messages', ({ body, user }) => {
+  const message = { id: uid(), senderType: 'employee', senderName: user.name, createdAt: now(), ...body }
+  db.messages.push(message)
+  persistDb()
+  return message
 })
 
 registerResource('businesses', db.businesses, { searchFields: ['name', 'city'], relationFields: ['customerId'] })
@@ -1073,11 +1265,18 @@ get('/timeline', ({ query }) => {
   const addCompletedTask = (t) => {
     if (t.status === 'COMPLETED') events.push({ id: `task-${t.id}`, type: 'TASK_COMPLETED', date: t.createdAt, title: t.title })
   }
+  const addProgram = (customerId, p) =>
+    events.push({ id: `program-${p.id}`, type: 'PROGRAM_ADDED', date: p.createdAt, title: `${p.name} dasturi qo‘shildi` })
 
   if (entityType === 'customer') {
+    const customer = db.customers.find((c) => c.id === entityId)
     const leads = db.leads.filter((l) => l.customer?.id === entityId)
     const deals = db.deals.filter((d) => d.customer?.id === entityId)
     const dealIds = deals.map((d) => d.id)
+    if (customer) {
+      events.push({ id: `customer-${customer.id}`, type: 'CUSTOMER_CREATED', date: customer.createdAt, title: `${customer.name} mijoz sifatida yaratildi` })
+      ;(customer.programs || []).forEach((p) => addProgram(customer.id, p))
+    }
     leads.forEach(addLead)
     deals.forEach(addDeal)
     db.quotations.filter((q) => dealIds.includes(q.dealId)).forEach(addQuotation)

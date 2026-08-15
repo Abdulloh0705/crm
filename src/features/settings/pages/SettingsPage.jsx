@@ -3,6 +3,7 @@ import { classNames } from '../../../utils/classNames'
 import { GeneralSection } from '../sections/GeneralSection'
 import { UsersRolesSection } from '../sections/UsersRolesSection'
 import { EmployeesSection } from '../sections/EmployeesSection'
+import { CustomerFieldsSection } from '../sections/CustomerFieldsSection'
 import { ComingSoonSection } from '../sections/ComingSoonSection'
 
 // Registry pattern: adding a section later is just one more entry here plus
@@ -20,13 +21,7 @@ const SECTIONS = [
       <ComingSoonSection title="Dasturlar" description="BOLD YECHIM mahsulotlari katalogi keyingi bosqichda qo‘shiladi." />
     ),
   },
-  {
-    id: 'customer-fields',
-    label: 'Mijoz maydonlari',
-    Component: () => (
-      <ComingSoonSection title="Mijoz maydonlari" description="Mijoz kartochkasiga qo‘shimcha maydonlar sozlash keyingi bosqichda qo‘shiladi." />
-    ),
-  },
+  { id: 'customer-fields', label: 'Mijoz maydonlari', Component: CustomerFieldsSection },
   // "Umumiy sozlamalar" (kompaniya nomi, vaqt mintaqasi) = CRM sozlamalari.
   { id: 'general', label: 'CRM sozlamalari', Component: GeneralSection },
 ]

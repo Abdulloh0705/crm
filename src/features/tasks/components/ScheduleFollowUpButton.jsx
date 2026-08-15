@@ -15,7 +15,7 @@ import { useToast } from '../../../store/ToastContext'
  * "schedule a follow-up" is really just "create a task," reusing the same
  * tasksService.create call every other Task creation path uses.
  */
-export function ScheduleFollowUpButton({ entityName, context }) {
+export function ScheduleFollowUpButton({ entityName, context, label = 'Qayta bog‘lanishni rejalashtirish', onCreated }) {
   const { isOpen, open, close } = useDisclosure()
   const [employees, setEmployees] = useState([])
   const createAction = useAction(tasksService.create)
@@ -34,6 +34,7 @@ export function ScheduleFollowUpButton({ entityName, context }) {
       await createAction.run(values)
       toast.success('Qayta bog‘lanish vazifasi yaratildi')
       close()
+      onCreated?.()
     } catch (err) {
       toast.error(err.message || 'Qayta bog‘lanish yaratishda xatolik yuz berdi')
     }
@@ -42,7 +43,7 @@ export function ScheduleFollowUpButton({ entityName, context }) {
   return (
     <PermissionGate permission="tasks.create">
       <Button variant="secondary" onClick={handleOpen}>
-        Qayta bog‘lanishni rejalashtirish
+        {label}
       </Button>
       <Modal open={isOpen} title="Qayta bog‘lanishni rejalashtirish" onClose={close}>
         <TaskForm

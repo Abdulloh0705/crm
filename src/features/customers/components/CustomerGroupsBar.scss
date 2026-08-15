@@ -1,0 +1,58 @@
+@use '../../../styles/abstracts/variables' as v;
+@use '../../../styles/abstracts/mixins' as m;
+
+.customer-groups-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: v.$space-2;
+  margin-bottom: v.$space-4;
+
+  &__chip {
+    display: flex;
+    align-items: center;
+    gap: v.$space-1;
+    padding: v.$space-1 v.$space-1 v.$space-1 v.$space-3;
+    border-radius: v.$radius-full;
+    border: 1px solid v.$color-border;
+    background: v.$color-bg-surface;
+    font-size: v.$font-size-sm;
+    color: v.$color-text-secondary;
+    transition: border-color v.$transition-fast, color v.$transition-fast;
+
+    &--active {
+      border-color: v.$color-primary-500;
+      color: v.$color-primary-700;
+      background: v.$color-primary-100;
+    }
+  }
+
+  &__chip-label {
+    padding: v.$space-1 0;
+  }
+
+  &__chip-menu {
+    @include m.flex(center, center);
+    width: 20px;
+    height: 20px;
+    border-radius: v.$radius-full;
+    color: inherit;
+    opacity: 0.6;
+    &:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__add {
+    padding: v.$space-1 v.$space-3;
+    border-radius: v.$radius-full;
+    border: 1px dashed v.$color-border;
+    font-size: v.$font-size-sm;
+    color: v.$color-text-muted;
+    &:hover {
+      color: v.$color-primary-700;
+      border-color: v.$color-primary-500;
+    }
+  }
+}

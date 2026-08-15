@@ -3,78 +3,241 @@ import { FormField } from '../../../components/FormField/FormField'
 import { Input } from '../../../components/Input/Input'
 import { Select } from '../../../components/Select/Select'
 import { Button } from '../../../components/Button/Button'
+import { useAsync } from '../../../hooks/useAsync'
+import { customerFieldDefsService } from '../../../services/customers.service'
 import { validate, rules } from '../../../utils/validators'
 import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '../../leads/leads.constants'
+import { ChevronDownIcon } from '../../../components/icons/Icons'
+import { classNames } from '../../../utils/classNames'
+import './CustomerForm.scss'
 
-const DEFAULT_VALUES = { name: '', phone: '', email: '', assignedEmployeeId: '', status: 'active', programsText: '' }
+const DEFAULT_ADDRESS = { country: '', region: '', city: '', district: '', street: '', house: '', extra: '' }
 
-export function CustomerForm({ initialValues = DEFAULT_VALUES, employees = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
-  const [values, setValues] = useState({
-    ...DEFAULT_VALUES,
-    ...initialValues,
-    programsText: (initialValues.programs || []).join(', '),
-  })
+const DEFAULT_VALUES = {
+  firstName: '',
+  lastName: '',
+  phone: '',
+  phone2: '',
+  telegram: '',
+  email: '',
+  address: DEFAULT_ADDRESS,
+  businessName: '',
+  businessType: '',
+  businessPhone: '',
+  businessAddress: '',
+  birthDate: '',
+  notes: '',
+  telegramUsername: '',
+  instagram: '',
+  source: '',
+  assignedEmployeeId: '',
+  status: 'active',
+  customFields: {},
+}
+
+function splitName(name = '') {
+  const parts = name.trim().split(/\s+/)
+  return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
+}
+
+function CollapsibleSection({ title, hint, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="customer-form-section">
+      <button type="button" className="customer-form-section__toggle" onClick={() => setOpen((v) => !v)}>
+        <span>
+          {title}
+          {hint && <span className="text-muted text-xs" style={{ marginLeft: 8, fontWeight: 400 }}>{hint}</span>}
+        </span>
+        <ChevronDownIcon width={14} height={14} className={classNames('customer-form-section__chevron', open && 'customer-form-section__chevron--open')} />
+      </button>
+      {open && <div className="customer-form-section__body">{children}</div>}
+    </div>
+  )
+}
+
+function CustomFieldInput({ def, value, onChange }) {
+  if (def.type === 'BOOLEAN') {
+    return (
+      <Select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Tanlanmagan</option>
+        <option value="true">Ha</option>
+        <option value="false">Yo‘q</option>
+      </Select>
+    )
+  }
+  if (def.type === 'SELECT') {
+    return (
+      <Select value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Tanlanmagan</option>
+        {(def.options || []).map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </Select>
+    )
+  }
+  const inputType = { NUMBER: 'number', DATE: 'date', PHONE: 'tel' }[def.type] || 'text'
+  return <Input type={inputType} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
+}
+
+// Employees/customFieldDefs are Drawer-scoped: this form is only ever
+// rendered inside the "+ Mijoz qo'shish" drawer, so it's fine to fetch
+// custom field definitions itself rather than threading them through props.
+export function CustomerForm({ initialValues, employees = [], submitLabel = 'Saqlash', loading, onSubmit, onCancel }) {
+  const { data: fieldDefsData } = useAsync(() => customerFieldDefsService.list({ pageSize: 100 }), [])
+  const fieldDefs = fieldDefsData?.items ?? []
+
+  const seed = initialValues
+    ? { ...DEFAULT_VALUES, ...splitName(initialValues.name), ...initialValues, address: { ...DEFAULT_ADDRESS, ...initialValues.address }, customFields: { ...initialValues.customFields } }
+    : DEFAULT_VALUES
+  const [values, setValues] = useState(seed)
   const [errors, setErrors] = useState({})
 
-  const handleChange = (field) => (event) => setValues((v) => ({ ...v, [field]: event.target.value }))
+  const set = (field) => (event) => setValues((v) => ({ ...v, [field]: event.target.value }))
+  const setAddress = (field) => (event) => setValues((v) => ({ ...v, address: { ...v.address, [field]: event.target.value } }))
+  const setCustomField = (defId) => (value) => setValues((v) => ({ ...v, customFields: { ...v.customFields, [defId]: value } }))
 
   const handleSubmit = (event) => {
     event.preventDefault()
     const nextErrors = validate(values, {
-      name: [rules.required('Ism kiritilishi shart')],
+      firstName: [rules.required('Ism kiritilishi shart')],
       phone: [rules.required('Telefon kiritilishi shart')],
       email: [rules.email()],
     })
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
-    const { programsText, ...rest } = values
-    onSubmit({
-      ...rest,
-      programs: programsText
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean),
-    })
+
+    const {
+      firstName, lastName, businessName, businessType, businessPhone, businessAddress,
+      ...rest
+    } = values
+    const customerPayload = { ...rest, name: `${firstName} ${lastName}`.trim() }
+    const businessPayload = businessName.trim()
+      ? { name: businessName, businessType, phone: businessPhone, address: businessAddress, city: values.address.city }
+      : null
+
+    onSubmit(customerPayload, businessPayload)
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <FormField label="To‘liq ism" required error={errors.name}>
-        <Input value={values.name} onChange={handleChange('name')} error={!!errors.name} disabled={loading} />
-      </FormField>
+    <form onSubmit={handleSubmit} noValidate className="stack">
+      <div className="detail-grid">
+        <FormField label="Ism" required error={errors.firstName}>
+          <Input value={values.firstName} onChange={set('firstName')} error={!!errors.firstName} disabled={loading} />
+        </FormField>
+        <FormField label="Familiya">
+          <Input value={values.lastName} onChange={set('lastName')} disabled={loading} />
+        </FormField>
+        <FormField label="Telefon" required error={errors.phone}>
+          <Input value={values.phone} onChange={set('phone')} error={!!errors.phone} disabled={loading} />
+        </FormField>
+        <FormField label="Qo‘shimcha telefon">
+          <Input value={values.phone2} onChange={set('phone2')} disabled={loading} />
+        </FormField>
+        <FormField label="Telegram">
+          <Input value={values.telegram} onChange={set('telegram')} disabled={loading} placeholder="@username" />
+        </FormField>
+        <FormField label="Elektron pochta" error={errors.email}>
+          <Input type="email" value={values.email} onChange={set('email')} error={!!errors.email} disabled={loading} />
+        </FormField>
+      </div>
 
-      <FormField label="Telefon" required error={errors.phone}>
-        <Input value={values.phone} onChange={handleChange('phone')} error={!!errors.phone} disabled={loading} />
-      </FormField>
+      <CollapsibleSection title="Manzil">
+        <div className="detail-grid">
+          <FormField label="Davlat">
+            <Input value={values.address.country} onChange={setAddress('country')} disabled={loading} />
+          </FormField>
+          <FormField label="Viloyat">
+            <Input value={values.address.region} onChange={setAddress('region')} disabled={loading} />
+          </FormField>
+          <FormField label="Shahar">
+            <Input value={values.address.city} onChange={setAddress('city')} disabled={loading} />
+          </FormField>
+          <FormField label="Tuman">
+            <Input value={values.address.district} onChange={setAddress('district')} disabled={loading} />
+          </FormField>
+          <FormField label="Ko‘cha">
+            <Input value={values.address.street} onChange={setAddress('street')} disabled={loading} />
+          </FormField>
+          <FormField label="Uy">
+            <Input value={values.address.house} onChange={setAddress('house')} disabled={loading} />
+          </FormField>
+        </div>
+        <FormField label="Qo‘shimcha manzil">
+          <Input value={values.address.extra} onChange={setAddress('extra')} disabled={loading} />
+        </FormField>
+      </CollapsibleSection>
 
-      <FormField label="Elektron pochta" error={errors.email}>
-        <Input type="email" value={values.email} onChange={handleChange('email')} error={!!errors.email} disabled={loading} />
-      </FormField>
+      <CollapsibleSection title="Mijozga tegishli biznes" hint="ixtiyoriy">
+        <div className="detail-grid">
+          <FormField label="Biznes nomi">
+            <Input value={values.businessName} onChange={set('businessName')} disabled={loading} />
+          </FormField>
+          <FormField label="Biznes turi">
+            <Input value={values.businessType} onChange={set('businessType')} disabled={loading} placeholder="Restoran, do‘kon..." />
+          </FormField>
+          <FormField label="Biznes telefoni">
+            <Input value={values.businessPhone} onChange={set('businessPhone')} disabled={loading} />
+          </FormField>
+          <FormField label="Biznes manzili">
+            <Input value={values.businessAddress} onChange={set('businessAddress')} disabled={loading} />
+          </FormField>
+        </div>
+      </CollapsibleSection>
 
-      <FormField label="Mas'ul xodim">
-        <Select value={values.assignedEmployeeId} onChange={handleChange('assignedEmployeeId')} disabled={loading}>
-          <option value="">Tanlanmagan</option>
-          {employees.map((employee) => (
-            <option key={employee.id} value={employee.id}>
-              {employee.name}
-            </option>
+      <CollapsibleSection title="Qo‘shimcha ma'lumotlar">
+        <div className="detail-grid">
+          <FormField label="Tug‘ilgan sana">
+            <Input type="date" value={values.birthDate} onChange={set('birthDate')} disabled={loading} />
+          </FormField>
+          <FormField label="Telegram username">
+            <Input value={values.telegramUsername} onChange={set('telegramUsername')} disabled={loading} />
+          </FormField>
+          <FormField label="Instagram">
+            <Input value={values.instagram} onChange={set('instagram')} disabled={loading} />
+          </FormField>
+          <FormField label="Mijoz manbasi">
+            <Select value={values.source} onChange={set('source')} disabled={loading}>
+              <option value="">Tanlanmagan</option>
+              {LEAD_SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {LEAD_SOURCE_LABELS[source]}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Mas'ul xodim">
+            <Select value={values.assignedEmployeeId} onChange={set('assignedEmployeeId')} disabled={loading}>
+              <option value="">Tanlanmagan</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Holat">
+            <Select value={values.status} onChange={set('status')} disabled={loading}>
+              {CUSTOMER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {CUSTOMER_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          {fieldDefs.map((def) => (
+            <FormField key={def.id} label={def.label}>
+              <CustomFieldInput def={def} value={values.customFields[def.id]} onChange={setCustomField(def.id)} />
+            </FormField>
           ))}
-        </Select>
-      </FormField>
-
-      <FormField label="Holat">
-        <Select value={values.status} onChange={handleChange('status')} disabled={loading}>
-          {CUSTOMER_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {CUSTOMER_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </Select>
-      </FormField>
-
-      <FormField label="Dastur(lar)" hint="Vergul bilan ajrating, masalan: Bito POS, Bito Kassa">
-        <Input value={values.programsText} onChange={handleChange('programsText')} disabled={loading} />
-      </FormField>
+        </div>
+        <FormField label="Izoh">
+          <Input value={values.notes} onChange={set('notes')} disabled={loading} />
+        </FormField>
+      </CollapsibleSection>
 
       <div className="card__footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
         {onCancel && (

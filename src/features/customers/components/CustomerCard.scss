@@ -3,21 +3,30 @@
 
 .customer-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
   gap: v.$space-4;
 }
 
 .customer-card {
-  @include m.card-surface;
-  @include m.surface-hover;
-  padding: v.$space-4;
+  @include m.glass-panel;
+  @include m.glass-hover;
+  padding: v.$space-5;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: v.$space-2;
+  gap: v.$space-3;
 
-  &__header {
-    @include m.flex(center, space-between);
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: v.$space-3;
+  }
+
+  &__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
 
   &__name {
@@ -54,9 +63,17 @@
 
   &__footer {
     margin-top: v.$space-1;
-    padding-top: v.$space-2;
+    padding-top: v.$space-3;
     border-top: 1px dashed v.$color-border;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: v.$space-2;
+  }
+
+  &__assignee {
     font-size: v.$font-size-xs;
     color: v.$color-text-muted;
+    @include m.truncate;
   }
 }

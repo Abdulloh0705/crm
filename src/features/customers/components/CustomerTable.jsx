@@ -13,15 +13,30 @@ export function CustomerTable({ customers, onDeactivate }) {
   const columns = [
     { key: 'name', header: 'Ism', render: (row) => <span className="table__cell-primary">{row.name}</span> },
     { key: 'phone', header: 'Telefon', render: (row) => row.phone || '—' },
-    { key: 'email', header: 'Elektron pochta', render: (row) => row.email || '—' },
     { key: 'business', header: 'Biznes', render: (row) => row.business?.name || '—' },
+    {
+      key: 'programs',
+      header: 'Dasturlar',
+      render: (row) =>
+        (row.programs || []).length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {row.programs.map((p) => (
+              <Badge key={p.id} variant="gray">
+                {p.name}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          '—'
+        ),
+    },
     {
       key: 'status',
       header: 'Holat',
       render: (row) => <Badge variant={row.status === 'active' ? 'success' : 'gray'}>{CUSTOMER_STATUS_LABELS[row.status] || row.status}</Badge>,
     },
     { key: 'assignedEmployee', header: 'Mas’ul xodim', render: (row) => row.assignedEmployee?.name || '—' },
-    { key: 'createdAt', header: 'Sana', render: (row) => formatDate(row.createdAt) },
+    { key: 'lastContactAt', header: 'Oxirgi aloqa', render: (row) => (row.lastContactAt ? formatDate(row.lastContactAt) : '—') },
     {
       key: 'actions',
       header: '',

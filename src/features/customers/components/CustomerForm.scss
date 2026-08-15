@@ -1,0 +1,32 @@
+@use '../../../styles/abstracts/variables' as v;
+@use '../../../styles/abstracts/mixins' as m;
+
+.customer-form-section {
+  border: 1px solid v.$color-border;
+  border-radius: v.$radius-md;
+  overflow: hidden;
+
+  &__toggle {
+    width: 100%;
+    @include m.flex(center, space-between);
+    padding: v.$space-3 v.$space-4;
+    font-size: v.$font-size-sm;
+    font-weight: v.$font-weight-semibold;
+    color: v.$color-text-primary;
+    background: v.$color-gray-50;
+  }
+
+  &__chevron {
+    transition: transform v.$transition-fast;
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__body {
+    padding: v.$space-4;
+    display: flex;
+    flex-direction: column;
+    gap: v.$space-4;
+  }
+}

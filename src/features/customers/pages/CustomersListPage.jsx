@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useCustomers } from '../customers.hooks'
 import { customersService } from '../../../services/customers.service'
+import { businessesService } from '../../../services/businesses.service'
 import { employeesService } from '../../../services/employees.service'
 import { CustomerTable } from '../components/CustomerTable'
 import { CustomerCard } from '../components/CustomerCard'
 import { CustomerForm } from '../components/CustomerForm'
+import { CustomerGroupsBar } from '../components/CustomerGroupsBar'
 import { CUSTOMER_STATUSES, CUSTOMER_STATUS_LABELS } from '../customers.constants'
+import { INSTALLATION_STATUSES, INSTALLATION_STATUS_LABELS } from '../../installations/installations.constants'
 import { Button } from '../../../components/Button/Button'
 import { Input } from '../../../components/Input/Input'
 import { Select } from '../../../components/Select/Select'
-import { Modal } from '../../../components/Modal/Modal'
+import { Drawer } from '../../../components/Drawer/Drawer'
 import { EmptyState } from '../../../components/EmptyState/EmptyState'
 import { Alert } from '../../../components/Alert/Alert'
 import { Spinner } from '../../../components/Spinner/Spinner'
@@ -34,6 +37,10 @@ export function CustomersListPage() {
     setAssignedEmployeeId,
     setCity,
     setProgram,
+    setGroupId,
+    setInstallationStatus,
+    setCreatedFrom,
+    setCreatedTo,
     setSort,
     setPage,
     loading,
@@ -46,7 +53,13 @@ export function CustomersListPage() {
   const confirm = useConfirm()
   const toast = useToast()
 
-  const createAction = useAction(customersService.create)
+  const createAction = useAction(async (customerPayload, businessPayload) => {
+    const customer = await customersService.create(customerPayload)
+    if (businessPayload) {
+      await businessesService.create({ ...businessPayload, customerId: customer.id })
+    }
+    return customer
+  })
   const deactivateAction = useAction((customer) => customersService.deactivate(customer.id))
 
   useEffect(() => {
@@ -60,9 +73,9 @@ export function CustomersListPage() {
       .catch(() => setFilterOptions({ cities: [], programs: [] }))
   }, [])
 
-  const handleCreate = async (values) => {
+  const handleCreate = async (customerPayload, businessPayload) => {
     try {
-      await createAction.run(values)
+      await createAction.run(customerPayload, businessPayload)
       toast.success('Mijoz qo‘shildi')
       close()
       refetch()
@@ -107,11 +120,13 @@ export function CustomersListPage() {
           </div>
           <PermissionGate permission="customers.create">
             <Button onClick={open}>
-              <PlusIcon width={16} height={16} /> Yangi mijoz
+              <PlusIcon width={16} height={16} /> Mijoz qo‘shish
             </Button>
           </PermissionGate>
         </div>
       </div>
+
+      <CustomerGroupsBar activeGroupId={params.groupId} onSelectGroup={setGroupId} />
 
       <div className="filters-row">
         <div className="input-group filters-row__search">
@@ -124,7 +139,7 @@ export function CustomersListPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={params.status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 160 }}>
+        <Select value={params.status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 150 }}>
           <option value="">Barcha holatlar</option>
           {CUSTOMER_STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -132,7 +147,7 @@ export function CustomersListPage() {
             </option>
           ))}
         </Select>
-        <Select value={params.assignedEmployeeId} onChange={(e) => setAssignedEmployeeId(e.target.value)} style={{ maxWidth: 180 }}>
+        <Select value={params.assignedEmployeeId} onChange={(e) => setAssignedEmployeeId(e.target.value)} style={{ maxWidth: 170 }}>
           <option value="">Barcha xodimlar</option>
           {employees.map((employee) => (
             <option key={employee.id} value={employee.id}>
@@ -140,7 +155,7 @@ export function CustomersListPage() {
             </option>
           ))}
         </Select>
-        <Select value={params.city} onChange={(e) => setCity(e.target.value)} style={{ maxWidth: 160 }}>
+        <Select value={params.city} onChange={(e) => setCity(e.target.value)} style={{ maxWidth: 150 }}>
           <option value="">Barcha shaharlar</option>
           {filterOptions.cities.map((city) => (
             <option key={city} value={city}>
@@ -148,7 +163,7 @@ export function CustomersListPage() {
             </option>
           ))}
         </Select>
-        <Select value={params.program} onChange={(e) => setProgram(e.target.value)} style={{ maxWidth: 180 }}>
+        <Select value={params.program} onChange={(e) => setProgram(e.target.value)} style={{ maxWidth: 170 }}>
           <option value="">Barcha dasturlar</option>
           {filterOptions.programs.map((program) => (
             <option key={program} value={program}>
@@ -156,7 +171,17 @@ export function CustomersListPage() {
             </option>
           ))}
         </Select>
-        <Select value={params.sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 180 }}>
+        <Select value={params.installationStatus} onChange={(e) => setInstallationStatus(e.target.value)} style={{ maxWidth: 180 }}>
+          <option value="">Barcha o‘rnatish holatlari</option>
+          {INSTALLATION_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {INSTALLATION_STATUS_LABELS[status]}
+            </option>
+          ))}
+        </Select>
+        <Input type="date" value={params.createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} style={{ maxWidth: 150 }} title="Sanadan" />
+        <Input type="date" value={params.createdTo} onChange={(e) => setCreatedTo(e.target.value)} style={{ maxWidth: 150 }} title="Sanagacha" />
+        <Select value={params.sort} onChange={(e) => setSort(e.target.value)} style={{ maxWidth: 170 }}>
           <option value="-createdAt">Yangi qo‘shilgan</option>
           <option value="createdAt">Eski qo‘shilgan</option>
           <option value="name">Ism (A-Z)</option>
@@ -198,9 +223,9 @@ export function CustomersListPage() {
         </>
       )}
 
-      <Modal open={isOpen} title="Yangi mijoz qo‘shish" onClose={close}>
+      <Drawer open={isOpen} title="Mijoz qo‘shish" subtitle="Asosiy ma'lumotlarni kiriting, qolganini keyinroq to‘ldirishingiz mumkin." onClose={close}>
         <CustomerForm employees={employees} submitLabel="Qo‘shish" loading={createAction.loading} onSubmit={handleCreate} onCancel={close} />
-      </Modal>
+      </Drawer>
     </div>
   )
 }

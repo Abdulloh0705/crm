@@ -18,6 +18,8 @@ const TYPE_LABELS = {
   INSTALLATION_SCHEDULED: 'O‘rnatish rejalashtirildi',
   INSTALLATION_COMPLETED: 'O‘rnatish yakunlandi',
   TASK_COMPLETED: 'Vazifa bajarildi',
+  CUSTOMER_CREATED: 'Mijoz yaratildi',
+  PROGRAM_ADDED: 'Dastur qo‘shildi',
 }
 
 function groupByDate(items) {
